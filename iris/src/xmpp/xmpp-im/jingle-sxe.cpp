@@ -205,7 +205,7 @@ namespace XMPP { namespace Jingle { namespace SXE {
         auto *session = _pad->session();
         if (isLocal()) {
             d->hosts = { session->manager()->client()->jid() };
-            if (d->encryption.isEmpty() && session->isEndToEndPreferred())
+            if (d->encryption.isEmpty() && encryptionPolicy() != EncryptionPolicy::Disabled)
                 d->encryption = preferredProtection(session);
         } else if (d->hosts.isEmpty()) {
             onFinish(Reason::FailedTransport, QStringLiteral("SXE transport without a host"));
@@ -214,7 +214,7 @@ namespace XMPP { namespace Jingle { namespace SXE {
         if (!d->encryption.isEmpty()) {
             const auto methodId = protectionMethod(session, d->encryption);
             if (methodId.isEmpty() || !session->ensureEncryptionMethod(methodId)) {
-                onFinish(Reason::SecurityError, QStringLiteral("SXE encryption method does not match the session"));
+                onSecurityFailure(QStringLiteral("SXE encryption method does not match the session"));
                 return;
             }
             if (!d->methodUnregistered)
@@ -222,10 +222,14 @@ namespace XMPP { namespace Jingle { namespace SXE {
                                                 &EncryptionManager::methodUnregistered, this,
                                                 [this, methodId](const QString &id) {
                     if (id == methodId && _state < State::Finishing)
-                        onFinish(Reason::SecurityError, QStringLiteral("SXE encryption method was unloaded"));
+                        onSecurityFailure(QStringLiteral("SXE encryption method was unloaded"));
                 });
-        } else if (session->isEndToEndRequired()) {
-            onFinish(Reason::SecurityError, QStringLiteral("Required end-to-end protection is unavailable for SXE"));
+        } else if (encryptionPolicy() == EncryptionPolicy::Required) {
+            const auto message = QStringLiteral("Required end-to-end protection is unavailable for SXE");
+            if (isLocal() && session->state() == State::ApprovedToSend)
+                onFinish(Reason::SecurityError, message, FailureDisposition::TryNextTransport);
+            else
+                onSecurityFailure(message);
             return;
         }
         setState(State::ApprovedToSend);
@@ -367,7 +371,7 @@ namespace XMPP { namespace Jingle { namespace SXE {
             });
             return;
         }
-        if (session->isEndToEndRequired()) {
+        if (encryptionPolicy() == EncryptionPolicy::Required) {
             qWarning("jingle-sxe: dropping unprotected payload of a session requiring end-to-end encryption");
             return;
         }
@@ -387,7 +391,7 @@ namespace XMPP { namespace Jingle { namespace SXE {
             return;
         const bool marker = sxe.firstChildElement().isNull();
         if (d->encryption.isEmpty()) {
-            if (!marker && !_pad->session()->isEndToEndRequired())
+            if (!marker && encryptionPolicy() != EncryptionPolicy::Required)
                 emit sxeReceived(sxe, from);
             return;
         }
@@ -1053,6 +1057,8 @@ namespace XMPP { namespace Jingle { namespace SXE {
 
     void Application::prepare()
     {
+        if (_state >= State::Finishing || _terminationReason.isValid())
+            return;
         if (!_transport && _transportSelector->hasMoreTransports()) {
             // The most preferred transport the peer supports; the SXE transport is the fallback below.
             auto transport = _transportSelector->getNextTransport();
@@ -1065,12 +1071,17 @@ namespace XMPP { namespace Jingle { namespace SXE {
             remove(Reason::FailedTransport, QStringLiteral("no SXE transport"));
             return;
         }
+        lockEncryptionPolicy();
         setState(State::ApprovedToSend);
         prepareTransport();
     }
 
     void Application::prepareTransport()
     {
+        if (!_transport || !_transport->setEncryptionPolicy(encryptionPolicy())) {
+            remove(Reason::SecurityError, QStringLiteral("Transport protection policy is incompatible"));
+            return;
+        }
         d->detachConnection();
         d->attachTransport();
         if (d->messageTransport()) {

@@ -107,10 +107,12 @@ namespace XMPP { namespace Jingle { namespace JET {
         Protection *createProtection(QObject *owner, const QString &contentName);
 
         using Done = KeyTransport::Done;
+        bool canPrepareOutgoing() const;
         void prepareOutgoing(const Done &done);
         void prepareIncoming(const QDomElement &security, const QString &contentName, const Done &done);
 
     private:
+        KeyTransport *outgoingKeyTransport() const;
         QPointer<Manager> manager_;
         QPointer<Session> session_;
     };
@@ -128,7 +130,8 @@ namespace XMPP { namespace Jingle { namespace JET {
         ~Protection() override;
 
         bool setIncomingContent(const QDomElement &content);
-        void prepare(bool outgoing, const Done &done);
+        void prepare(bool outgoing, EncryptionPolicy policy, const Done &done, bool nativeProtection = false);
+        bool hasIncomingSecurity() const { return !incomingSecurity_.isNull(); }
         bool prepared() const { return prepared_; }
         bool encrypted() const { return secret_.has_value(); }
         bool authenticated() const;
@@ -152,6 +155,7 @@ namespace XMPP { namespace Jingle { namespace JET {
         bool preparing_ = false;
         bool prepared_ = false;
         bool outgoing_ = false;
+        EncryptionPolicy policy_ = EncryptionPolicy::Disabled;
         bool connectionUsed_ = false; // GCM key/IV must never encrypt a second stream
         QMetaObject::Connection removed_;
         QMetaObject::Connection providerDestroyed_;

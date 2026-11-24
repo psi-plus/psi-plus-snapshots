@@ -215,9 +215,14 @@ namespace XMPP { namespace Jingle {
         // Application policy: true when this content may share one physical
         // transport association with other Jingle contents.
         virtual bool allowsSharedTransport() const { return false; }
+
+        // The session supplies the default; a content may override it before
+        // preparation. The application chooses how to satisfy its own policy.
+        bool setEncryptionPolicy(std::optional<EncryptionPolicy> policy);
+        EncryptionPolicy encryptionPolicy() const;
         // Compatibility with an already negotiated physical association.
         // Initial grouping still uses allowsSharedTransport().
-        virtual bool canShareTransport(const Transport *) const { return allowsSharedTransport(); }
+        virtual bool canShareTransport(const Transport *transport) const;
 
         // Application policy: retain this local offer when a crossed content-add
         // loses arbitration. Cancellation still ends the application normally.
@@ -291,6 +296,9 @@ namespace XMPP { namespace Jingle {
         bool incomingTransportReject();
 
     protected:
+        // Snapshot the effective policy before asynchronous preparation starts.
+        void lockEncryptionPolicy();
+
         /**
          * @brief wraps transport update so transport can be safely-deleted before callback is triggered
          */
@@ -386,6 +394,8 @@ namespace XMPP { namespace Jingle {
 
     private:
         friend class Session;
+        std::optional<EncryptionPolicy> encryptionPolicy_;
+        bool encryptionPolicyLocked_ = false;
         // After the losing IQ and winning group update settle.
         bool retryContentAdd();
         friend class ConnectionWaiter;

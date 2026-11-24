@@ -23,8 +23,6 @@
 #include "jingle-rtp.h"
 
 #include "jingle-application.h"
-#include "jingle-ft.h"
-#include "jingle-ice.h"
 #include "jingle-jet.h"
 #include "jingle-dtls-omemo.h"
 #include "jingle-session.h"
@@ -922,78 +920,11 @@ namespace XMPP { namespace Jingle {
 
     void Manager::removeSignalingFilter(SignalingFilter *filter) { d->filters.removeAll(filter); }
 
-    // Jingle has already identified each content's application and transport.
-    // Enforce the required-E2EE policy at this common signaling boundary; the
-    // selected transport/application performs cryptographic preparation itself.
-    static bool protectedContents(Manager *manager, Session *session, const QDomElement &jingle)
-    {
-        if (!session)
-            return false;
-
-        bool found = false;
-        for (auto content = jingle.firstChildElement(QStringLiteral("content")); !content.isNull();
-             content      = content.nextSiblingElement(QStringLiteral("content"))) {
-            found                         = true;
-            const auto        transport   = content.firstChildElement(QStringLiteral("transport"));
-            const auto        description = content.firstChildElement(QStringLiteral("description"));
-            // Content-modify and description-info do not replace the existing
-            // transport, and therefore cannot weaken its security association.
-            if (transport.isNull())
-                continue;
-            const ContentBase key(content);
-            auto             *application = key.isValid() ? session->content(key.name, key.creator) : nullptr;
-            auto             *file        = qobject_cast<FileTransfer::Application *>(application);
-
-            if (file && file->isTransportEncrypted())
-                continue;
-            if (description.namespaceURI() == FileTransfer::NS && manager->jet()) {
-                bool hasSecurity = false;
-                for (auto sec = content.firstChildElement(QStringLiteral("security")); !sec.isNull();
-                     sec      = sec.nextSiblingElement(QStringLiteral("security"))) {
-                    if (sec.namespaceURI() == JET::Manager::ns()) {
-                        hasSecurity = true;
-                        break;
-                    }
-                }
-                if (hasSecurity)
-                    continue;
-            }
-            if (transport.namespaceURI() == QLatin1String("urn:xmpp:jingle:transports:sxe")
-                && transport.hasAttribute(QStringLiteral("encryption")))
-                continue;
-
-            if (transport.namespaceURI() == ICE::NS || transport.namespaceURI() == ICE::NS_ICE_UDP) {
-                const auto fingerprint = transport.firstChildElement(QStringLiteral("fingerprint"));
-                if (!fingerprint.isNull() && fingerprint.namespaceURI() == QLatin1String("http://gultsch.de/xmpp/drafts/omemo/dlts-srtp-verification")
-                    && manager->dtlsVerification())
-                    continue;
-                // Candidate-only updates do not change the established DTLS
-                // fingerprint; the transport still enforces its authenticated
-                // peer association.
-                if (fingerprint.isNull() && description.isNull())
-                    continue;
-            }
-            return false;
-        }
-        return found;
-    }
-
     void Manager::receiveFiltered(const QDomElement &iq)
     {
         if (d->filters.isEmpty()) {
-            // Nothing can protect the transports of a session that requires end-to-end encryption.
-            const auto jingle = iq.firstChildElement(QStringLiteral("jingle"));
-            const auto session
-                = this->session(Jid(iq.attribute(QStringLiteral("from"))), jingle.attribute(QStringLiteral("sid")));
-            if (session && session->isEndToEndRequired()
-                && !jingle.firstChildElement(QStringLiteral("content")).isNull()
-                && !protectedContents(this, session, jingle)) {
-                d->pushTask->respondError(iq,
-                                          Stanza::Error(Stanza::Error::ErrorType::Cancel,
-                                                        Stanza::Error::ErrorCond::NotAcceptable,
-                                                        QStringLiteral("No end-to-end encryption available")));
-                return;
-            }
+            // Content policy is chosen by the receiving application after
+            // parsing the offer. The manager only dispatches signaling.
             d->pushTask->process(iq);
             return;
         }
@@ -1021,16 +952,8 @@ namespace XMPP { namespace Jingle {
                           std::function<void(const QDomElement &, const std::optional<XMPP::Stanza::Error> &)> send)
     {
         if (d->filters.isEmpty()) {
-            const auto jingle  = iq.firstChildElement(QStringLiteral("jingle"));
-            const auto session = this->session(to, jingle.attribute(QStringLiteral("sid")));
-            if (session && session->isEndToEndRequired()
-                && !jingle.firstChildElement(QStringLiteral("content")).isNull()
-                && !protectedContents(this, session, jingle))
-                send({},
-                     Stanza::Error(Stanza::Error::ErrorType::Cancel, Stanza::Error::ErrorCond::NotAcceptable,
-                                   QStringLiteral("No end-to-end encryption available")));
-            else
-                send(iq, std::nullopt);
+            // The application and its transport own protection negotiation.
+            send(iq, std::nullopt);
             return;
         }
         const auto        stored = d->filterDocument.importNode(iq, true).toElement();
@@ -1178,6 +1101,10 @@ namespace XMPP { namespace Jingle {
             ret += filter->discoFeatures();
         if (auto *jet = d->jet.data())
             ret += jet->discoFeatures();
+#ifdef IRIS_ENABLE_OMEMO
+        if (dtlsVerification())
+            ret += OmemoDtlsVerification::directFeature();
+#endif
         ret.removeDuplicates();
         return ret;
     }

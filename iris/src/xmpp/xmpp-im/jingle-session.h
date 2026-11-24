@@ -39,6 +39,7 @@ namespace Jingle {
     // class Manager;
     class Application;
     namespace SXE { class Transport; }
+    namespace JET { class Pad; }
 
     // Ordered XEP-0338 group. Multiple groups may have the same semantics.
     struct ContentGroup {
@@ -92,15 +93,14 @@ namespace Jingle {
         PeerAuthentication peerAuthentication() const;
         void               setPeerAuthentication(const PeerAuthentication &authentication);
 
-        /// Local policy: the session uses only end-to-end protected transports.
-        /// ICE prepares authenticated DTLS fingerprints, while JET file transfers
-        /// prepare their keys in the application; unprotected contents are refused.
-        void setEndToEndRequired(bool required);
-        bool isEndToEndRequired() const;
-        /// Local wish: protect what can be protected (e.g. JET for files) but run unprotected otherwise.
-        /// A session that requires end-to-end encryption prefers it as well.
-        void setEndToEndPreferred(bool preferred);
-        bool isEndToEndPreferred() const;
+        // Disabled does not initiate E2EE, but accepts a valid protected peer offer.
+        // Preferred may choose plaintext only before protection is negotiated.
+        // Required rejects unprotected content unless the application explicitly
+        // overrides the default. Changing the default is allowed only in Created.
+        void setEncryptionPolicy(EncryptionPolicy policy);
+        EncryptionPolicy encryptionPolicy() const;
+        bool isEndToEndRequired() const { return encryptionPolicy() == EncryptionPolicy::Required; }
+        bool isEndToEndPreferred() const { return encryptionPolicy() != EncryptionPolicy::Disabled; }
 
         /**
          * Select the encryption method for this Jingle negotiation before it starts.
@@ -110,6 +110,10 @@ namespace Jingle {
          */
         bool              setEncryptionMethod(const QString &methodId);
         QString           encryptionMethodId() const;
+        // A hint for automatic negotiation; unlike setEncryptionMethod(), it
+        // never excludes another compatible method or changes a bound session.
+        void setPreferredEncryptionMethod(const QString &methodId);
+        QString preferredEncryptionMethod() const;
         EncryptedSession *encryptionSession() const;
         bool              allowsEncryptionMethod(const QString &methodId) const;
 
@@ -189,6 +193,7 @@ namespace Jingle {
         friend class PublicationManager;
         friend class JTPush;
         friend class SXE::Transport;
+        friend class JET::Pad;
 
         bool ensureEncryptionMethod(const QString &methodId);
         bool startEncryptionSession(const QString &methodId);

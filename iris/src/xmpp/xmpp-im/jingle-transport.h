@@ -73,6 +73,8 @@ namespace XMPP { namespace Jingle {
         inline Origin               creator() const { return _creator; }
         inline State                state() const { return _state; }
         inline State                prevState() const { return _prevState; }
+        enum class FailureDisposition { TryNextTransport, AbortContent };
+        FailureDisposition failureDisposition() const { return failureDisposition_; }
         inline Reason               lastReason() const { return _lastReason; }
         inline XMPP::Stanza::Error  lastError() const { return _lastError; }
         inline TransportManagerPad *pad() const { return _pad; }
@@ -170,6 +172,20 @@ namespace XMPP { namespace Jingle {
         // this capability and Application::allowsSharedTransport().
         virtual bool supportsSharedTransport() const { return false; }
 
+        // Native peer-authenticated encryption for the selected transport.
+        // A positive capability is a negotiation option, not proof of an
+        // authenticated connection. Once required, the transport must fail
+        // closed before making a data channel usable.
+        virtual bool supportsAuthenticatedEncryption() const { return false; }
+        virtual bool requireAuthenticatedEncryption() { return false; }
+        // Actual authentication of the established association, not peer caps.
+        virtual bool hasAuthenticatedEncryption() const { return false; }
+
+        // The application configures native protection on this logical
+        // transport once, before preparation. It is not a session-wide setting.
+        virtual bool setEncryptionPolicy(EncryptionPolicy policy);
+        EncryptionPolicy encryptionPolicy() const { return encryptionPolicy_.value_or(EncryptionPolicy::Disabled); }
+
         // a component is basically is a subconnection usually with a dedicated IP port. A component may have one or
         // more channels. Components are pretty much generic but channels aren't. Channels give connection objects,
         // while components are rather indexes.
@@ -253,6 +269,10 @@ namespace XMPP { namespace Jingle {
         void stateChanged();
 
     protected:
+        // Only transports that actually implement native protection may
+        // accept Required. Reuse this storage/immutability check in overrides.
+        bool configureEncryptionPolicy(EncryptionPolicy policy);
+
         /// Just updates state and signals about the change. No logic is attached to the new state.
         void setState(State newState);
 
@@ -260,7 +280,12 @@ namespace XMPP { namespace Jingle {
         bool wasAccepted() const;
 
         /// Called in the end of life to trigger final events
-        void onFinish(Reason::Condition condition, const QString &message = QString());
+        void onFinish(Reason::Condition condition, const QString &message = QString(),
+                      FailureDisposition disposition = FailureDisposition::TryNextTransport);
+        void onSecurityFailure(const QString &message)
+        {
+            onFinish(Reason::SecurityError, message, FailureDisposition::AbortContent);
+        }
 
         /**
          * @brief notifyIncomingConnection checks all acceptors and return true if any accepted the connection
@@ -273,12 +298,14 @@ namespace XMPP { namespace Jingle {
         Origin                    _creator   = Origin::None;
         TransportManagerPad      *_pad       = nullptr; // owner of this transport
         Reason                    _lastReason;
+        FailureDisposition        failureDisposition_ = FailureDisposition::TryNextTransport;
         XMPP::Stanza::Error       _lastError;
         int                       _componentsCount = 1;
         QList<ConnectionAcceptor> _connectionAcceptors;
 
     private:
         friend class Application;
+        std::optional<EncryptionPolicy> encryptionPolicy_;
         // Non-owning back-references. Several BUNDLE contents may use one transport.
         QSet<Application *> _applications;
         void                associate(Application *);

@@ -7,6 +7,13 @@ of the plan).
 
 ## Goal
 
+The application supplies a local protection policy, based on its operation
+(e.g. a published file's download policy), and may explicitly select a method
+or provide a non-binding method preference. Iris does not own publication access rules
+or infer policy from disco alone. The peer's actual offer/answer is distinct from
+both local policy and advertised capabilities. Plain DTLS is not authenticated E2EE.
+
+
 - A session can be marked as requiring end-to-end encryption (for example a call or a whiteboard
   started from an OMEMO chat, or a file sent from it). This is a local policy, not a wire
   attribute: each side decides what it accepts.
@@ -28,12 +35,21 @@ them. The manager also destroys them before its transport registries.
 OMEMO itself does not depend on Jingle, and applications do not need to
 enable or manage these adapters explicitly.
 
-An application passes its selected method ID to
+An application that explicitly pins a method passes its ID to
 `Jingle::Session::setEncryptionMethod(methodId)` **before** starting the
 negotiation, along with its desired preferred/required E2EE policy. Iris
 creates and holds the associated `EncryptedSession` via the registry,
 and releases it when Jingle terminates. A method that is unregistered
 while the session is active cannot be silently replaced by OMEMO.
+
+For file publications the application instead leaves the method unbound and
+may set `setPreferredEncryptionMethod(methodId)` as a non-binding hint.
+JET selects a compatible registered provider at negotiation time, preferring
+the hint if compatible, and binds the method before starting the key exchange.
+An incoming JET envelope can bind an unspecified method, but cannot replace
+an already selected or authenticated method. Failure after provider selection
+is terminal. Native DTLS remains preferred where supported; its current
+verification adapter is OMEMO.
 
 JET-OMEMO and DTLS verification operate only for an OMEMO-selected (or
 legacy unselected) Jingle session. The SXE message transport uses the
@@ -157,10 +173,12 @@ Conversations `Content.setSecurity()/getSecurity()`, `JingleFileTransferConnecti
 - `Jingle::SignalingFilter` (registered with `Manager::addSignalingFilter()`) rewrites incoming and
   outgoing `<jingle/>` elements asynchronously and adds extensions to outgoing XEP-0353
   messages. While a filter works on an IQ of a session, later IQs of that session in the same
-  direction wait; without filters nothing changes. A filter error answers an incoming IQ, or fails
+  direction wait; without filters nothing changes. The manager does not
+  inspect content XML for particular encryption mechanisms: applications
+  and transports enforce the selected content policy before payload I/O. A filter error answers an incoming IQ, or fails
   an outgoing one as if the peer had returned it; a refused `session-initiate` or `session-accept`
   ends the session. `MessageInitiation` keeps foreign extensions (`extensions()`, `addExtension()`).
-- `Session::setEndToEndRequired()` is the local policy; `Session::peerAuthentication()` (method,
+- `Session::setEncryptionPolicy()` sets the local policy (Disabled, Preferred, Required); `Session::peerAuthentication()` (method,
   device, identity key, trust level) records who authenticated the peer's DTLS fingerprints.
 - `Jingle::OmemoDtlsVerification` is registered with `Jingle::Manager` as an optional
   DTLS fingerprint service. The ICE transport parses `<transport/>` and recognizes
@@ -191,9 +209,18 @@ Conversations `Content.setSecurity()/getSecurity()`, `JingleFileTransferConnecti
   the requirement fingerprints stay plain; a responder requiring it does not answer a plain
   fingerprint; a tampered fingerprint cannot start DTLS; without a verifier a
   session requiring it sends nothing.
-- `Session::setEndToEndPreferred()` asks for protection where possible without refusing otherwise
-  (a session requiring it prefers it too). Signaling filters can add disco features
-  (`SignalingFilter::discoFeatures()`).
+- Capabilities describe supported mechanisms, not the peer's policy. A protected offer
+  commits the content to that protection. Disabled does not initiate E2EE but accepts
+  compatible protected offers; Preferred permits plaintext only if a compatible
+  mechanism is unavailable before negotiation; Required forbids plaintext.
+  Signaling filters can add disco features (`SignalingFilter::discoFeatures()`).
+- Transport failure disposition is independent of the XEP-0166 reason:
+  `TryNextTransport` permits another compatible candidate; `AbortContent`
+  terminates the content (authentication failures, identity mismatch, or a lost
+  negotiated security mechanism). An authentication failure never triggers plaintext fallback.
+  Failed JET key exchange and failed fingerprint encryption after provider selection are
+  terminal even under Preferred. Ordinary network failure remains retryable, without
+  weakening any previously negotiated protection.
 - `Jingle::JET::Manager` is an always-present Jingle service that registers
   XEP-0391 key-delivery providers and advertises their disco features. It does
   not own Jingle sessions or create OMEMO providers. `JET::Pad` belongs to a
@@ -206,7 +233,22 @@ Conversations `Content.setSecurity()/getSecurity()`, `JingleFileTransferConnecti
   The wrapper handles AES-GCM, the final 16-byte tag, data framing and errors.
   One content key/IV may protect only one stream: transport replacement cannot
   silently reuse that pair. This implementation requires the exact plaintext
-  length and does not offer indefinite-stream or ranged-transfer protection.
+  length. Known-length ranges (including offset-to-end when the size is known)
+  use a fresh content key and IV. Indefinite-length streams are not supported.
+- FileTransfer prefers authenticated native transport encryption when the
+  transport can negotiate it; JET remains the fallback for IBB/S5B and ICE
+  without native authentication. The session policy is a default, overridable
+  per content before preparation. Each application chooses its own protection
+  and explicitly configures its logical transport; ICE does not inspect other
+  contents. JET-protected data needs no additional fingerprint authentication.
+  An established BUNDLE association is reused only when compatible, never
+  upgraded or renegotiated for a new content. DTLS fingerprint verification uses OMEMO,
+  including direct IQ negotiation with peers advertising the direct feature.
+  BUNDLE followers inherit authentication only from their existing connected
+  association with matching local and remote fingerprints. No per-range
+  OMEMO exchange or JET wrapper is needed in that case.
+  Replacing native protection with a transport requiring JET is rejected
+  until a fresh content negotiation can carry the JET envelope.
 - `Jingle::JetOmemo` implements only the XEP-0396 `JET::KeyTransport` adapter in the format of
   Conversations and Dino:
   - for file-transfer contents it creates in a session that prefers or requires end-to-end

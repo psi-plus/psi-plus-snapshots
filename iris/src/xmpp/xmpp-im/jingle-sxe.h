@@ -51,6 +51,7 @@ namespace XMPP { namespace Jingle { namespace SXE {
         Transport(TransportManagerPad *pad, Origin creator);
         ~Transport() override;
 
+        bool setEncryptionPolicy(EncryptionPolicy policy) override { return configureEncryptionPolicy(policy); }
         void                        prepare() override;
         void                        start() override;
         PrepareUpdateResult         prepareUpdate(const QDomElement &transportEl) override;

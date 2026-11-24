@@ -52,6 +52,8 @@ struct Transfer {
     std::unique_ptr<QBuffer>  sink;
     QByteArray                wire; // IBB payload as sent
     bool                      security = false;
+    bool                      verified = false;
+    bool                      deferred = false;
     QString                   securityType;
     QString                   cipher;
     // Session completion may delete the applications before send() returns.
@@ -66,7 +68,9 @@ struct Transfer {
 // Alice offers @a data to bob over IBB with the given policy; bob accepts.
 std::unique_ptr<Transfer> send(Endpoint &alice, Endpoint &bob, const QByteArray &data, bool preferred, bool required,
                                const std::function<void(QDomElement &)> &tamper   = {},
-                               const QString                            &methodId = OmemoEncryption::methodId())
+                               const QString                            &methodId = OmemoEncryption::methodId(),
+                               const FT::Range &range = {}, bool streaming = false, bool request = false,
+                               const QString &methodHint = {})
 {
     auto t    = std::make_unique<Transfer>();
     t->source = std::make_unique<QBuffer>();
@@ -97,9 +101,11 @@ std::unique_ptr<Transfer> send(Endpoint &alice, Endpoint &bob, const QByteArray 
     file.setName(QStringLiteral("secret.bin"));
     file.setSize(quint64(data.size()));
     file.addHash(Hash::from(Hash::Sha256, data));
+    if (range.isValid())
+        file.setRange(range);
 
     t->session = alice.client.jingleManager()->newSession(bob.jid);
-    if (preferred) {
+    if (preferred && !methodId.isEmpty()) {
         const bool registered = t->session->setEncryptionMethod(methodId);
         check(registered == (methodId == OmemoEncryption::methodId()),
               "Jingle method selection did not reflect method availability");
@@ -108,17 +114,60 @@ std::unique_ptr<Transfer> send(Endpoint &alice, Endpoint &bob, const QByteArray 
             check(t->session->encryptionSession() != nullptr && t->session->encryptionSession()->methodId() == methodId,
                   "Jingle did not retain a method-specific encryption session");
     }
-    t->session->setEndToEndPreferred(preferred);
-    t->session->setEndToEndRequired(required);
-    t->sending = qobject_cast<FT::Application *>(t->session->newContent(FT::NS, J::Origin::Initiator));
-    t->sending->setFile(file);
-    check(t->sending->setTransport(t->session->newOutgoingTransport(J::IBB::NS)), "IBB transport was not set");
-    QObject::connect(t->sending, &FT::Application::deviceRequested, t->source.get(),
-                     [raw](quint64, std::optional<quint64>) {
-                         raw->sendingEncrypted = raw->sending->isTransportEncrypted();
-                         raw->sending->setDevice(raw->source.get(), false);
-                     });
-    t->session->addContent(t->sending);
+    t->session->setPreferredEncryptionMethod(methodHint);
+    t->session->setEncryptionPolicy(required ? J::EncryptionPolicy::Required
+        : (preferred ? J::EncryptionPolicy::Preferred : J::EncryptionPolicy::Disabled));
+    auto *local = qobject_cast<FT::Application *>(
+        t->session->newContent(FT::NS, request ? J::Origin::Responder : J::Origin::Initiator));
+    local->setFile(file);
+    check(local->setTransport(t->session->newOutgoingTransport(J::IBB::NS)), "IBB transport was not set");
+    auto configureSender = [raw](FT::Application *sender) {
+        raw->sending = sender;
+        QObject::connect(sender, &FT::Application::deviceRequested, raw->source.get(),
+                         [raw](quint64 offset, std::optional<quint64>) {
+                             raw->sendingEncrypted = raw->sending->isTransportEncrypted();
+                             check(raw->source->seek(qint64(offset)), "invalid requested source offset");
+                             raw->sending->setDevice(raw->source.get(), false);
+                         });
+    };
+    auto configureReceiver = [raw, streaming](FT::Application *receiver, J::Session *session) {
+        raw->receiving = receiver;
+        QObject::connect(receiver, &FT::Application::stateChanged, raw->sink.get(), [raw, session](J::State state) {
+            raw->receivingState = state;
+            raw->receivingReason = raw->receiving->lastReason();
+            raw->receivingEncrypted = raw->receiving->isTransportEncrypted();
+            raw->receiverAuthentication = session->peerAuthentication();
+        });
+        QObject::connect(receiver, &FT::Application::payloadVerified, raw->sink.get(), [raw, streaming]() {
+            raw->verified = true;
+            if (streaming)
+                raw->deferred = raw->receiving->state() < J::State::Finished;
+        });
+        if (streaming) {
+            receiver->setStreamingMode();
+            receiver->setKeepTransportUntilReceipt();
+            receiver->setReceiptDeferred();
+            QObject::connect(receiver, &FT::Application::connectionReady, raw->sink.get(), [raw]() {
+                auto connection = raw->receiving->connection();
+                auto read = [raw, connection]() {
+                    const auto bytes = connection->readAll();
+                    raw->sink->write(bytes);
+                };
+                QObject::connect(connection.data(), &J::Connection::readyRead, raw->sink.get(), read);
+                read();
+            });
+        } else {
+            QObject::connect(receiver, &FT::Application::deviceRequested, raw->sink.get(),
+                             [raw](quint64, std::optional<quint64>) {
+                                 raw->receiving->setDevice(raw->sink.get(), false);
+                             });
+        }
+    };
+    if (request)
+        configureReceiver(local, t->session);
+    else
+        configureSender(local);
+    t->session->addContent(local);
     t->session->initiate();
     for (int i = 0; i < 20 && !t->peerSession && t->session && t->session->state() != J::State::Finished; ++i)
         pump(alice, bob);
@@ -126,23 +175,27 @@ std::unique_ptr<Transfer> send(Endpoint &alice, Endpoint &bob, const QByteArray 
     if (!t->peerSession)
         return t;
 
+    FT::Application *remote = nullptr;
     for (auto content : t->peerSession->contentList())
         if (auto received = qobject_cast<FT::Application *>(content))
-            t->receiving = received;
-    check(t->receiving, "the offered file is missing");
+            remote = received;
+    check(remote, "the offered file is missing");
     t->offered = true;
-    t->receiving->setAcceptFile(file);
-    QObject::connect(t->receiving, &FT::Application::stateChanged, t->sink.get(), [raw](J::State state) {
-        raw->receivingState         = state;
-        raw->receivingReason        = raw->receiving->lastReason();
-        raw->receivingEncrypted     = raw->receiving->isTransportEncrypted();
-        raw->receiverAuthentication = raw->peerSession->peerAuthentication();
-    });
-    QObject::connect(t->receiving, &FT::Application::deviceRequested, t->sink.get(),
-                     [raw](quint64, std::optional<quint64>) { raw->receiving->setDevice(raw->sink.get(), false); });
+    remote->setAcceptFile(file);
+    if (request)
+        configureSender(remote);
+    else
+        configureReceiver(remote, t->peerSession);
     t->peerSession->accept();
-    for (int i = 0; i < 400 && t->receiving && t->receiving->state() < J::State::Finished; ++i)
+    for (int i = 0; i < 400 && t->receiving && t->receiving->state() < J::State::Finished; ++i) {
         pump(alice, bob);
+        if (streaming && t->verified && t->receiving) {
+            check(t->sending && t->sending->state() < J::State::Finished,
+                  "sender finished before the deferred receipt");
+            check(t->receiving->acknowledgeReceived(), "deferred receipt could not be released");
+            streaming = false;
+        }
+    }
     return t;
 }
 }
@@ -208,6 +261,42 @@ int main(int argc, char **argv)
         check(t->receiverAuthentication.deviceId == alice.omemo->ownDeviceId(),
               "the receiver did not record the sender's device");
 
+        // A publication policy does not pin its chat encryption method.
+        // An unavailable hint is not a reason to fail or send plaintext when
+        // the peer supports another authenticated method.
+        t = send(alice, bob, data, true, true, {}, QString(), {}, false, false,
+                 QStringLiteral("unavailable-method"));
+        check(t->offered && t->security && t->receivingEncrypted && t->sink->data() == data,
+              "automatic JET selection failed with an unavailable method hint");
+
+        // A receiver-driven range uses the same JET connection, even when
+        // the receiver consumes bytes directly and defers its receipt.
+        const FT::Range range(1234, 4567);
+        t = send(alice, bob, data, true, true, {}, OmemoEncryption::methodId(), range, true, true);
+        check(t->verified && t->deferred && t->sink->data() == data.mid(1234, 4567)
+                  && t->wire.size() == 4567 + 16 && t->receivingEncrypted,
+              "encrypted streaming range or deferred receipt failed");
+        const FT::Range tail(91234, 0);
+        t = send(alice, bob, data, true, true, {}, OmemoEncryption::methodId(), tail, true, true);
+        check(t->verified && t->sink->data() == data.mid(91234)
+                  && t->wire.size() == data.size() - 91234 + 16,
+              "encrypted range to end of file failed");
+
+        // A tampered requested range must not be verified or release a receipt.
+        t = send(alice, bob, data, true, true, [](QDomElement &stanza) {
+            auto ibb = stanza.firstChildElement(QStringLiteral("data"));
+            if (ibb.namespaceURI() != IbbNs || ibb.attribute(QStringLiteral("seq")) != QLatin1String("0"))
+                return;
+            auto bytes = QByteArray::fromBase64(ibb.text().toLatin1());
+            if (!bytes.isEmpty()) {
+                bytes[0] = char(bytes[0] ^ 1);
+                auto text = ibb.firstChild().toText();
+                text.setData(QString::fromLatin1(bytes.toBase64()));
+            }
+        }, OmemoEncryption::methodId(), range, true, true);
+        check(t->offered && !t->verified && t->receivingReason.condition() == J::Reason::SecurityError,
+              "tampered encrypted range was accepted");
+
         // A tampered block fails authentication.
         t = send(alice, bob, data, true, false, [](QDomElement &stanza) {
             auto ibb = stanza.firstChildElement(QStringLiteral("data"));
@@ -231,6 +320,7 @@ int main(int argc, char **argv)
                 security.at(0).toElement().setAttribute(QStringLiteral("cipher"), QStringLiteral("invalid-cipher"));
         });
         check(t->offered && t->wire.isEmpty() && !t->receivingEncrypted
+                  && t->receivingState == J::State::Finished
                   && t->receivingReason.condition() == J::Reason::SecurityError,
               "Invalid JET envelope was accepted or a transfer was started");
 

@@ -626,6 +626,7 @@ void Application::prepare()
         return;
     if (!_transport && !selectNextTransport())
         return;
+    lockEncryptionPolicy();
     auto pad   = static_cast<Pad *>(_pad);
     auto media = pad->mediaSession();
     if (!media) {
@@ -709,6 +710,10 @@ void Application::prepareTransport()
 {
     if (!_transport)
         return;
+    if (!_transport->setEncryptionPolicy(encryptionPolicy())) {
+        remove(Reason::SecurityError, QStringLiteral("Transport protection policy is incompatible"));
+        return;
+    }
 
     if (association_)
         association_->disconnect(this);

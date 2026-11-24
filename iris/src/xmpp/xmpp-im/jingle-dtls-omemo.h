@@ -44,6 +44,7 @@ namespace Jingle {
         Q_OBJECT
     public:
         static QString ns();
+        static QString directFeature();
         static QString methodId();
 
         OmemoDtlsVerification(Manager *manager, OmemoEncryption *omemo, QObject *parent = nullptr);
@@ -55,7 +56,8 @@ namespace Jingle {
         using FingerprintDone  = std::function<void(const QDomElement &fingerprint, const QString &error)>;
         using VerificationDone = std::function<void(
             const QDomElement &fingerprint, const Session::PeerAuthentication &authentication, const QString &error)>;
-        void encryptFingerprint(Session *session, const QDomElement &fingerprint, const FingerprintDone &done);
+        void encryptFingerprint(Session *session, const QDomElement &fingerprint, const FingerprintDone &done,
+                                bool allowUnselectedDevice = false);
         void decryptFingerprint(Session *session, const QDomElement &fingerprint, const VerificationDone &done);
 
         void decorateMessageInitiation(const Jid &to, MessageInitiation &initiation);

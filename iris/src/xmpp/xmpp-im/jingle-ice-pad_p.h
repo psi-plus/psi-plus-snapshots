@@ -20,6 +20,7 @@ namespace XMPP { namespace Jingle { namespace ICE {
 
         // Shared BUNDLE association for a content transport, or nullptr if it is not grouped.
         IceConnection *groupedConnectionFor(Transport *transport, bool *contentBound, bool *groupRequired);
+        IceConnection *existingExtensionAssociation(const Transport *transport) const;
         // Independent association for a content transport outside any BUNDLE group.
         ConnectionMembership membershipFor(Transport *transport, bool *contentBound);
         ConnectionMembership takeUnacceptedSingletonMembership(Transport *transport);

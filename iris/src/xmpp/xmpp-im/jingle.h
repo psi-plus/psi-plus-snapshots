@@ -60,6 +60,9 @@ namespace Jingle {
         class Manager;
     }
 
+    // Local protection policy, independent of method and negotiated state.
+    enum class EncryptionPolicy { Disabled, Preferred, Required };
+
     enum class Origin { None, Both, Initiator, Responder };
 
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)

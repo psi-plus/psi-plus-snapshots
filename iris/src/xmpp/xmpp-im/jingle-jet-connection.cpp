@@ -149,11 +149,14 @@ namespace XMPP { namespace Jingle { namespace JET {
         if (failed_ || finished_ || !cipher_)
             return;
         const auto tag = cipher_->finish();
+        QPointer<Connection> guard(this);
         if (tag.size() != StreamCipher::TagSize || !writeWire(tag)) {
-            fail(QStringLiteral("Failed to finish the authenticated JET stream"));
+            if (guard)
+                fail(QStringLiteral("Failed to finish the authenticated JET stream"));
             return;
         }
-        finished_ = true;
+        if (guard)
+            finished_ = true;
     }
 
     void Connection::pump()

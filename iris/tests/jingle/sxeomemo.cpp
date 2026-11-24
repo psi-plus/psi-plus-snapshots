@@ -106,8 +106,8 @@ Run start(Endpoint &alice, Endpoint &bob, bool preferred, bool required, Wire &w
         check(available == (methodId == OmemoEncryption::methodId()),
               "The SXE Jingle session selected an unexpected encryption method");
     }
-    run.session->setEndToEndPreferred(preferred);
-    run.session->setEndToEndRequired(required);
+    run.session->setEncryptionPolicy(required ? J::EncryptionPolicy::Required
+        : (preferred ? J::EncryptionPolicy::Preferred : J::EncryptionPolicy::Disabled));
     run.local = qobject_cast<SXE::Application *>(run.session->newContent(SXE::NS_SVG_WHITEBOARD));
     run.session->addContent(run.local);
     run.session->initiate();
@@ -234,7 +234,7 @@ int main(int argc, char **argv)
     setPeerFeatures(alice.client, carol.jid, carol.client.jingleManager()->discoFeatures() + omemo2);
     auto *pending = alice.client.jingleManager()->newSession(carol.jid, QStringLiteral("sxe-unload"));
     check(pending && pending->setEncryptionMethod(OmemoEncryption::methodId()), "Could not select OMEMO for pending SXE");
-    pending->setEndToEndRequired(true);
+    pending->setEncryptionPolicy(J::EncryptionPolicy::Required);
     auto raw = pending->newOutgoingTransport(SXE::NS_TRANSPORT);
     QPointer<SXE::Transport> transport(qobject_cast<SXE::Transport *>(raw.data()));
     check(transport, "Could not create SXE message transport");
@@ -242,6 +242,7 @@ int main(int argc, char **argv)
     parseInto(invalid, QStringLiteral("<transport xmlns='urn:xmpp:jingle:transports:sxe' "
                                      "encryption='urn:test:unsupported'><host>carol@example.test/device</host></transport>"));
     check(!transport->prepareUpdate(invalid.documentElement()), "Unsupported SXE wire profile was accepted");
+    check(transport->setEncryptionPolicy(J::EncryptionPolicy::Required), "could not configure SXE protection");
     transport->prepare();
     check(transport->encryption() == OmemoEncryption::namespaceUri(), "SXE did not negotiate OMEMO 2");
     QDomDocument edit;

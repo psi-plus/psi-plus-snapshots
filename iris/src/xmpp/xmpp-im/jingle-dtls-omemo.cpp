@@ -52,6 +52,8 @@ namespace XMPP { namespace Jingle {
 
     QString OmemoDtlsVerification::ns() { return VerificationNs; }
 
+    QString OmemoDtlsVerification::directFeature() { return VerificationNs + QStringLiteral("#direct"); }
+
     QString OmemoDtlsVerification::methodId() { return OmemoEncryption::methodId(); }
 
     OmemoDtlsVerification::OmemoDtlsVerification(Manager *manager, OmemoEncryption *omemo, QObject *parent) :
@@ -90,7 +92,7 @@ namespace XMPP { namespace Jingle {
     }
 
     void OmemoDtlsVerification::encryptFingerprint(Session *session, const QDomElement &fingerprint,
-                                                   const FingerprintDone &done)
+                                                   const FingerprintDone &done, bool allowUnselectedDevice)
     {
         if (!session || !session->allowsEncryptionMethod(OmemoEncryption::methodId()) || !d->omemo
             || !d->omemo->isReady()) {
@@ -98,7 +100,7 @@ namespace XMPP { namespace Jingle {
             return;
         }
         const auto device = peerDevice(session->peer(), session->sid());
-        if (!device) {
+        if (!device && !allowUnselectedDevice) {
             done({}, QStringLiteral("No OMEMO device was negotiated for the peer"));
             return;
         }
@@ -117,7 +119,11 @@ namespace XMPP { namespace Jingle {
                 *attempt = nullptr;
                 return;
             }
-            auto *job = guard->d->omemo->encryptElement(peer, protocol, fingerprint, { *device });
+            // Direct file requests have no JMI proceed/device selection. In
+            // that case encrypt to the eligible peer devices, then bind the
+            // answer to its authenticated OMEMO identity as usual.
+            const QList<quint32> devices = device ? QList<quint32> { *device } : QList<quint32> {};
+            auto *job = guard->d->omemo->encryptElement(peer, protocol, fingerprint, devices);
             if (!job) {
                 *attempt = nullptr;
                 done({}, QStringLiteral("Cannot encrypt DTLS fingerprint"));
@@ -203,7 +209,7 @@ namespace XMPP { namespace Jingle {
                 || (existing.isValid()
                     && (existing.method != authentication.method || existing.deviceId != authentication.deviceId
                         || existing.identityKey != authentication.identityKey))
-                || (current->isEndToEndRequired() && !trusted(authentication.trustLevel))) {
+                || !trusted(authentication.trustLevel)) {
                 done({}, {}, QStringLiteral("The peer's OMEMO identity is not acceptable"));
                 return;
             }

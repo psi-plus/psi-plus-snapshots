@@ -415,7 +415,7 @@ namespace XMPP { namespace Jingle {
     Application::Update Application::evaluateOutgoingUpdate()
     {
         _update = { Action::NoAction, Reason() };
-        if (_state == State::Finished || _state == State::Created
+        if (_state == State::Finished || (_state == State::Created && !_terminationReason.isValid())
             || _pendingTransportReplace == PendingTransportReplace::NeedAck)
             return _update;
 
@@ -778,8 +778,8 @@ namespace XMPP { namespace Jingle {
             std::move(ready),
             [this, guard = QPointer<Application>(this), failedTransport = _transport,
              revision = _connectionAttemptRevision]() {
-                if (!guard || _state >= State::Finishing || _connectionAttemptRevision != revision
-                    || (_transport && _transport != failedTransport))
+                if (!guard || _state >= State::Finishing || _terminationReason.isValid()
+                    || _connectionAttemptRevision != revision || (_transport && _transport != failedTransport))
                     return;
                 if (failedTransport) {
                     qDebug("Application::expectSingleConnection: stopping failed %s transport",
@@ -799,6 +799,36 @@ namespace XMPP { namespace Jingle {
     }
 
     bool Application::isRemote() const { return _pad->session()->role() != _creator; }
+
+    bool Application::setEncryptionPolicy(std::optional<EncryptionPolicy> policy)
+    {
+        if (_state != State::Created || encryptionPolicyLocked_)
+            return false;
+        encryptionPolicy_ = policy;
+        return true;
+    }
+
+    EncryptionPolicy Application::encryptionPolicy() const
+    {
+        if (encryptionPolicy_)
+            return *encryptionPolicy_;
+        const auto *session = _pad ? _pad->session() : nullptr;
+        return session ? session->encryptionPolicy() : EncryptionPolicy::Disabled;
+    }
+
+    void Application::lockEncryptionPolicy()
+    {
+        if (!encryptionPolicyLocked_) {
+            encryptionPolicy_ = encryptionPolicy();
+            encryptionPolicyLocked_ = true;
+        }
+    }
+
+    bool Application::canShareTransport(const Transport *transport) const
+    {
+        return allowsSharedTransport() && transport
+            && (encryptionPolicy() != EncryptionPolicy::Required || transport->hasAuthenticatedEncryption());
+    }
 
     bool Application::selectNextTransport(const QPointer<Transport> alikeTransport)
     {
@@ -820,14 +850,26 @@ namespace XMPP { namespace Jingle {
                 if (!current())
                     return false;
             }
+            if (_transport && _transport->lastReason().condition() == Reason::SecurityError) {
+                const auto reason = _transport->lastReason();
+                remove(reason.condition(), reason.text());
+                return false;
+            }
             _state             = (isRemote() || _state > State::ApprovedToSend) ? State::Finishing : State::Finished;
             _terminationReason = Reason(Reason::FailedTransport);
             emit updated(); // will be evaluated to content-remove
             return false;
         };
 
-        if (!current())
+        if (!current() || _terminationReason.isValid())
             return false;
+
+        if (_transport && _transport->failureDisposition() == Transport::FailureDisposition::AbortContent) {
+            const auto reason = _transport->lastReason();
+            cancelConnectionWaiter();
+            remove(reason.condition(), reason.text());
+            return false;
+        }
 
         // If the application policy cannot migrate the current transport,
         // do not enter a selector loop that may keep returning the same

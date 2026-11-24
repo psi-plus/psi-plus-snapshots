@@ -228,9 +228,9 @@ namespace XMPP { namespace Jingle {
         Jid     localParty; // that one will be set as initiator/responder if provided
         Session::PeerAuthentication peerAuthentication;
         QString                     encryptionMethodId;
+        QString                     preferredEncryptionMethod;
         QPointer<EncryptedSession>  encryptionSession;
-        bool                        endToEndRequired         = false;
-        bool                        endToEndPreferred        = false;
+        EncryptionPolicy            encryptionPolicy = EncryptionPolicy::Disabled;
         bool                        waitingAck               = false;
         bool                        needNotifyGroup          = false; // whenever grouping info changes
         bool                        groupingAllowed          = false;
@@ -482,17 +482,16 @@ namespace XMPP { namespace Jingle {
                 Reason reason;
                 bool   all = true;
                 for (auto const &c : std::as_const(contentList)) {
-                    if (c->state() < State::Finishing) {
+                    const auto upd = c->evaluateOutgoingUpdate();
+                    const bool rejected = upd.action == Action::ContentRemove || upd.action == Action::ContentReject;
+                    if (c->state() < State::Finishing && !rejected) {
                         all = false;
                         break;
                     }
-
-                    if (c->state() == State::Finishing) {
-                        auto upd = c->evaluateOutgoingUpdate();
-                        if (upd.action == Action::ContentRemove && upd.reason.condition()) {
-                            reason = upd.reason;
-                        }
-                    }
+                    if (rejected && upd.reason.isValid())
+                        reason = upd.reason;
+                    else if (c->state() == State::Finished && c->lastReason().isValid())
+                        reason = c->lastReason();
                 }
                 if (all) {
                     terminateReason = reason;
@@ -755,6 +754,19 @@ namespace XMPP { namespace Jingle {
                     return true;
                 }
             } else {
+                // A local initial content can fail before it is announced
+                // (for example, mandatory encryption cannot be negotiated).
+                // Finished applications have no outgoing update, so waiting
+                // for ContentAdd would strand the unannounced session forever.
+                for (const auto &c : std::as_const(contentList)) {
+                    if (c->state() != State::Finished)
+                        continue;
+                    terminateReason = c->lastReason();
+                    if (!terminateReason.isValid())
+                        terminateReason = Reason(Reason::FailedApplication);
+                    setSessionFinished();
+                    return true;
+                }
                 for (const auto &c : std::as_const(contentList)) {
                     auto out = c->evaluateOutgoingUpdate();
                     if (out.action == Action::ContentRemove) {
@@ -2870,13 +2882,13 @@ namespace XMPP { namespace Jingle {
         emit peerAuthenticationChanged();
     }
 
-    void Session::setEndToEndRequired(bool required) { d->endToEndRequired = required; }
+    void Session::setEncryptionPolicy(EncryptionPolicy policy)
+    {
+        if (d->state == State::Created)
+            d->encryptionPolicy = policy;
+    }
 
-    bool Session::isEndToEndRequired() const { return d->endToEndRequired; }
-
-    void Session::setEndToEndPreferred(bool preferred) { d->endToEndPreferred = preferred; }
-
-    bool Session::isEndToEndPreferred() const { return d->endToEndPreferred || d->endToEndRequired; }
+    EncryptionPolicy Session::encryptionPolicy() const { return d->encryptionPolicy; }
 
     bool Session::setEncryptionMethod(const QString &methodId)
     {
@@ -2921,10 +2933,20 @@ namespace XMPP { namespace Jingle {
 
     QString Session::encryptionMethodId() const { return d->encryptionMethodId; }
 
+    void Session::setPreferredEncryptionMethod(const QString &methodId)
+    {
+        if (d->state == State::Created)
+            d->preferredEncryptionMethod = methodId;
+    }
+
+    QString Session::preferredEncryptionMethod() const { return d->preferredEncryptionMethod; }
+
     EncryptedSession *Session::encryptionSession() const { return d->encryptionSession; }
 
     bool Session::allowsEncryptionMethod(const QString &methodId) const
     {
+        if (d->peerAuthentication.isValid() && d->peerAuthentication.method != methodId)
+            return false;
         return d->encryptionMethodId.isEmpty() || (d->encryptionMethodId == methodId && d->encryptionSession);
     }
 
@@ -3336,7 +3358,7 @@ namespace XMPP { namespace Jingle {
         // its method. Do not accept a previously authenticated offer from
         // another method, or an unavailable required method.
         if (!d->encryptionMethodId.isEmpty()
-            && ((d->endToEndRequired && !d->encryptionSession)
+            && ((isEndToEndRequired() && !d->encryptionSession)
                 || (d->peerAuthentication.isValid() && d->peerAuthentication.method != d->encryptionMethodId))) {
             terminate(Reason::SecurityError,
                       QStringLiteral("Selected Jingle encryption method unavailable or mismatched"));
@@ -3369,7 +3391,7 @@ namespace XMPP { namespace Jingle {
 
     void Session::initiate()
     {
-        if (d->role == Origin::Initiator && d->state == State::Created && d->endToEndRequired
+        if (d->role == Origin::Initiator && d->state == State::Created && isEndToEndRequired()
             && !d->encryptionMethodId.isEmpty() && !d->encryptionSession) {
             d->terminateReason
                 = Reason(Reason::SecurityError, QStringLiteral("Selected Jingle encryption method unavailable"));

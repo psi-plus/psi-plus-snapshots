@@ -63,6 +63,21 @@ namespace XMPP { namespace Jingle {
 
     Transport::~Transport() { setParent(nullptr); }
 
+    bool Transport::setEncryptionPolicy(EncryptionPolicy policy)
+    {
+        return policy != EncryptionPolicy::Required && configureEncryptionPolicy(policy);
+    }
+
+    bool Transport::configureEncryptionPolicy(EncryptionPolicy policy)
+    {
+        if (encryptionPolicy_)
+            return *encryptionPolicy_ == policy;
+        if (_state != State::Created && !(isRemote() && _state == State::Pending))
+            return false;
+        encryptionPolicy_ = policy;
+        return true;
+    }
+
     void Transport::associate(Application *app) { _applications.insert(app); }
 
     void Transport::disassociate(Application *app)
@@ -111,10 +126,11 @@ namespace XMPP { namespace Jingle {
         return _state >= State::ApprovedToSend;
     }
 
-    void Transport::onFinish(Reason::Condition condition, const QString &message)
+    void Transport::onFinish(Reason::Condition condition, const QString &message, FailureDisposition disposition)
     {
         qInfo("jingle transport=%p ns=%s finished state=%d creator=%d reason=%d text=%s", static_cast<void *>(this),
               qUtf8Printable(_pad->ns()), int(_state), int(_creator), int(condition), qUtf8Printable(message));
+        failureDisposition_ = disposition;
         _lastReason = Reason(condition, message);
         _prevState  = _state;
         _state      = State::Finished;

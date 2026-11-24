@@ -7,6 +7,10 @@
 #undef main
 
 #include <iris/jingle-ice.h>
+#include <iris/jingle-ft.h>
+#include <iris/xmpp-im/jingle-ibb.h>
+#include <iris/jingle-jet.h>
+#include <QBuffer>
 #include <iris/jingle-dtls-omemo.h>
 #include <iris/jingle-session.h>
 #include <iris/jingle-sxe-omemo.h>
@@ -20,6 +24,7 @@
 
 namespace J   = XMPP::Jingle;
 namespace SXE = XMPP::Jingle::SXE;
+namespace FT = XMPP::Jingle::FileTransfer;
 
 namespace {
 const QString VerificationNs(QStringLiteral("http://gultsch.de/xmpp/drafts/omemo/dlts-srtp-verification"));
@@ -92,11 +97,12 @@ Run startSession(Endpoint &alice, Endpoint &bob, bool proceed, bool requireEndTo
 {
     Run        run;
     auto       connection = QObject::connect(bob.client.jingleManager(), &J::Manager::incomingSession, &bob.client,
-                                             [&run, peerRequires](J::Session *session) {
+                                             [&run, peerRequires, proceed](J::Session *session) {
                                            run.peerSession = session;
                                            check(session->setEncryptionMethod(OmemoEncryption::methodId()),
                                                  "Incoming DTLS session could not select OMEMO");
-                                           session->setEndToEndRequired(peerRequires);
+                                           session->setEncryptionPolicy(peerRequires ? J::EncryptionPolicy::Required
+                                               : (proceed ? J::EncryptionPolicy::Preferred : J::EncryptionPolicy::Disabled));
                                        });
     const auto sid = QStringLiteral("omemo-dtls-") + QString::number(QRandomGenerator::global()->bounded(1000000));
     if (proceed) {
@@ -107,7 +113,8 @@ Run startSession(Endpoint &alice, Endpoint &bob, bool proceed, bool requireEndTo
     run.session = alice.client.jingleManager()->newSession(bob.jid, sid);
     check(run.session->setEncryptionMethod(OmemoEncryption::methodId()),
           "Outgoing DTLS session could not select OMEMO");
-    run.session->setEndToEndRequired(requireEndToEnd);
+    run.session->setEncryptionPolicy(requireEndToEnd ? J::EncryptionPolicy::Required
+        : (proceed ? J::EncryptionPolicy::Preferred : J::EncryptionPolicy::Disabled));
     run.local = qobject_cast<SXE::Application *>(run.session->newContent(SXE::NS_SVG_WHITEBOARD));
     check(run.local, "whiteboard content was not created");
     run.session->addContent(run.local);
@@ -119,13 +126,175 @@ Run startSession(Endpoint &alice, Endpoint &bob, bool proceed, bool requireEndTo
         for (auto content : run.peerSession->contentList())
             if (auto whiteboard = qobject_cast<SXE::Application *>(content))
                 run.remote = whiteboard;
-        if (run.remote) {
-            run.remote->prepare();
+        if (run.remote && run.peerSession->state() == J::State::Created)
             run.peerSession->accept();
-        }
     }
     QObject::disconnect(connection);
     return run;
+}
+
+// Direct IQ file requests must not need JMI or an extra JET layer.
+void fileRanges(Endpoint &alice, Endpoint &bob, bool native = true)
+{
+    auto features = [native](Endpoint &endpoint) {
+        auto result = endpoint.client.jingleManager()->discoFeatures()
+            + QStringList { OmemoEncryption::namespaceUri(),
+                            OmemoEncryption::legacyDevicesNode() + QStringLiteral("+notify") };
+        if (!native)
+            result.removeAll(J::OmemoDtlsVerification::directFeature());
+        return result;
+    };
+    setPeerFeatures(alice.client, bob.jid, features(bob));
+    setPeerFeatures(bob.client, alice.jid, features(alice));
+
+    const QByteArray payload = QByteArray(8192, 'a') + QByteArray(8192, 'b');
+    FT::File file;
+    file.setName(QStringLiteral("ranges.bin"));
+    file.setSize(quint64(payload.size()));
+    file.addHash(Hash::from(Hash::Sha256, payload));
+
+    QPointer<J::Session> remoteSession;
+    QList<QPointer<FT::Application>> senders;
+    Wire initialWire, extensionWire;
+    int jet = 0, receipts = 0, sessions = 0;
+    bool extending = false;
+    onStanza = [&](const Endpoint &, QDomElement &stanza) {
+        const auto seen = inspect(stanza);
+        auto &wire = extending ? extensionWire : initialWire;
+        wire.verified += seen.verified;
+        wire.plain += seen.plain;
+        const auto jingle = stanza.firstChildElement(QStringLiteral("jingle"));
+        jet += jingle.elementsByTagNameNS(J::JET::Manager::ns(), QStringLiteral("security")).size();
+        if (!jingle.firstChildElement(QStringLiteral("received")).isNull())
+            ++receipts;
+    };
+    auto incoming = QObject::connect(bob.client.jingleManager(), &J::Manager::incomingSession, &bob.client,
+        [&](J::Session *session) {
+            remoteSession = session;
+            ++sessions;
+            check(session->setEncryptionMethod(OmemoEncryption::methodId()), "missing incoming OMEMO");
+            session->setEncryptionPolicy(J::EncryptionPolicy::Required);
+            auto accept = [&, session]() {
+                for (auto *content : session->contentList()) {
+                    if (content->state() != J::State::Created)
+                        continue;
+                    auto *a = qobject_cast<FT::Application *>(content);
+                    check(a && a->senders() == session->role(), "unexpected file offer");
+                    senders.append(a);
+                    const bool independent = a->transport()->pad()->ns() == J::IBB::NS;
+                    if (independent)
+                        check(a->setEncryptionPolicy(J::EncryptionPolicy::Disabled),
+                              "could not override incoming content policy");
+                    a->setAcceptFile(a->file());
+                    a->setKeepTransportUntilReceipt();
+                    QObject::connect(a, &FT::Application::deviceRequested, a,
+                        [&, a, independent](quint64 offset, std::optional<quint64>) {
+                            check(a->isTransportEncrypted() == (!native && !independent),
+                                  "incorrect payload protection on sender");
+                            auto *source = new QBuffer(a);
+                            source->setData(payload);
+                            source->open(QIODevice::ReadOnly);
+                            check(source->seek(qint64(offset)), "source seek failed");
+                            a->setDevice(source);
+                        });
+                    if (session->state() != J::State::Created)
+                        a->prepare();
+                }
+            };
+            QObject::connect(session, &J::Session::newContentReceived, session, accept);
+            accept();
+            session->accept();
+        });
+
+    QPointer<J::Session> session = alice.client.jingleManager()->newSession(bob.jid);
+    check(session->setEncryptionMethod(OmemoEncryption::methodId()), "missing outgoing OMEMO");
+    session->setEncryptionPolicy(J::EncryptionPolicy::Required);
+    QByteArray received[3];
+    bool verified[3] = { false, false, false };
+    QObject consumer;
+    auto request = [&](int i) {
+        auto *a = qobject_cast<FT::Application *>(session->newContent(FT::NS, session->peerRole()));
+        check(a, "could not create range request");
+        auto range = file;
+        range.setRange(FT::Range(quint64((i % 2) * 8192), 8192));
+        a->setFile(range);
+        a->setStreamingMode();
+        a->setKeepTransportUntilReceipt();
+        a->setReceiptDeferred();
+        const bool independent = i == 2;
+        if (independent)
+            check(a->setEncryptionPolicy(J::EncryptionPolicy::Disabled), "could not override content policy");
+        check(a->setTransport(session->newOutgoingTransport(independent ? J::IBB::NS : J::ICE::NS)),
+              "could not select range transport");
+        QObject::connect(a, &FT::Application::connectionReady, &consumer, [&, a, i] {
+            check(a->isTransportEncrypted() == (!native && i != 2), "incorrect payload protection on receiver");
+            auto connection = a->connection();
+            auto read = [&, i, connection] { received[i] += connection->readAll(); };
+            QObject::connect(connection.data(), &QIODevice::readyRead, &consumer, read);
+            read();
+        });
+        QObject::connect(a, &FT::Application::payloadVerified, &consumer, [&, i] { verified[i] = true; });
+        session->addContent(a);
+        return QPointer<FT::Application>(a);
+    };
+    auto first = request(0);
+    session->initiate();
+    check(pumpUntil(alice, bob, [&] { return verified[0]; }), "direct encrypted range did not complete");
+    if (!native) {
+        check(first && received[0] == payload.left(8192) && jet > 0
+                  && initialWire.verified == 0 && initialWire.plain >= 2,
+              "required JET over ICE did not use independent payload protection");
+        check(first->acknowledgeReceived(), "JET range receipt was lost");
+        check(pumpUntil(alice, bob, [&] { return receipts == 1; }), "JET range receipt did not arrive");
+        if (session)
+            session->terminate(J::Reason::Success);
+        pumpUntil(alice, bob, [] { return false; }, 200);
+        QObject::disconnect(incoming);
+        onStanza = nullptr;
+        return;
+    }
+    check(first && senders.size() == 1 && senders[0] && senders[0]->state() < J::State::Finished
+              && receipts == 0 && initialWire.verified >= 2 && initialWire.plain == 0 && jet == 0,
+          "initial range did not use authenticated DTLS and deferred receipt");
+    check(session && remoteSession && session->peerAuthentication().isValid()
+              && remoteSession->peerAuthentication().isValid(), "DTLS authentication missing");
+
+    extending = true;
+    // An unrelated content with its own transport and an explicit Disabled
+    // policy must not change the authenticated ICE association or its policy.
+    auto independent = request(2);
+    check(pumpUntil(alice, bob, [&] { return verified[2]; }), "independent content did not complete");
+    check(independent && received[2] == payload.left(8192)
+              && independent->encryptionPolicy() == J::EncryptionPolicy::Disabled
+              && session->encryptionPolicy() == J::EncryptionPolicy::Required
+              && first && first->transport()->hasAuthenticatedEncryption()
+              && jet == 0 && extensionWire.verified == 0,
+          "independent content altered the protected association");
+    check(independent->acknowledgeReceived(), "independent receipt was lost");
+    check(pumpUntil(alice, bob, [&] { return receipts == 1; }), "independent receipt did not arrive");
+
+    auto second = request(1);
+    check(pumpUntil(alice, bob, [&] {
+        if (!session || !second)
+            return false;
+        for (const auto &group : session->negotiatedGroupings())
+            if (group.semantics == QLatin1String("BUNDLE") && group.contents.contains(second->contentName()))
+                return true;
+        return false;
+    }), "authenticated BUNDLE extension did not commit");
+    check(first && first->acknowledgeReceived(), "predecessor receipt was lost");
+    check(pumpUntil(alice, bob, [&] { return verified[1]; }), "authenticated BUNDLE range did not complete");
+    check(second && sessions == 1 && jet == 0 && extensionWire.verified == 0,
+          "BUNDLE repeated OMEMO key exchange or opened another session");
+    check(received[0] == payload.left(8192) && received[1] == payload.mid(8192),
+          "DTLS range payload mismatch");
+    check(second->acknowledgeReceived(), "successor receipt was lost");
+    check(pumpUntil(alice, bob, [&] { return receipts == 3; }), "range receipts did not arrive");
+    if (session)
+        session->terminate(J::Reason::Success);
+    pumpUntil(alice, bob, [] { return false; }, 200);
+    QObject::disconnect(incoming);
+    onStanza = nullptr;
 }
 
 void exercise(Endpoint &alice, Endpoint &bob, bool omemo2)
@@ -193,9 +362,12 @@ void exercise(Endpoint &alice, Endpoint &bob, bool omemo2)
         run.session->terminate(J::Reason::Success);
     pumpUntil(alice, bob, [] { return false; }, 200);
 
-    // A tampered fingerprint is refused.
-    onStanza = [](const Endpoint &, QDomElement &stanza) {
+    // A tampered fingerprint is refused, never retried on an unprotected transport.
+    int replacements = 0;
+    onStanza = [&replacements](const Endpoint &, QDomElement &stanza) {
         const auto jingle = stanza.firstChildElement(QStringLiteral("jingle"));
+        if (jingle.attribute(QStringLiteral("action")) == QLatin1String("transport-replace"))
+            ++replacements;
         if (jingle.attribute(QStringLiteral("action")) != QLatin1String("session-initiate"))
             return;
         const auto payloads = jingle.elementsByTagName(QStringLiteral("payload"));
@@ -211,7 +383,8 @@ void exercise(Endpoint &alice, Endpoint &bob, bool omemo2)
     pumpUntil(alice, bob, [&run] { return !run.session || run.session->state() == J::State::Finished; }, 5000);
     check(!run.peerSession || run.peerSession->state() == J::State::Finished,
           "a tampered fingerprint was allowed to start a transport");
-    check(!synchronized(run.local, run.remote), "tampered DTLS authentication exposed application data");
+    check(!synchronized(run.local, run.remote) && replacements == 0,
+          "tampered DTLS authentication exposed application data or triggered fallback");
     onStanza = nullptr;
     qInfo("OMEMO %s DTLS verification passed", omemo2 ? "2" : "legacy");
 }
@@ -246,6 +419,9 @@ int main(int argc, char **argv)
         exercise(alice, bob, false);
     if (protocols.testFlag(OmemoProtocol::Omemo2))
         exercise(alice, bob, true);
+
+    fileRanges(alice, bob);
+    fileRanges(alice, bob, false); // JET over ICE without direct fingerprint verification.
 
     // A peer whose OMEMO 2 bundle the server no longer holds (one item per node, as old ejabberd) is
     // reached through its legacy OMEMO bundle, and the fingerprints are still verified.
