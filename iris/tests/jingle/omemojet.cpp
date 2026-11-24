@@ -9,6 +9,7 @@
 #include <iris/jingle-ft.h>
 #include <iris/jingle-jet-omemo.h>
 #include <iris/jingle-session.h>
+#include <iris/jingle-sxe-omemo.h>
 #include <iris/xmpp-im/jingle-ibb.h>
 #include <iris/xmpp_caps.h>
 #include <iris/xmpp_hash.h>
@@ -64,7 +65,8 @@ struct Transfer {
 
 // Alice offers @a data to bob over IBB with the given policy; bob accepts.
 std::unique_ptr<Transfer> send(Endpoint &alice, Endpoint &bob, const QByteArray &data, bool preferred, bool required,
-                               const std::function<void(QDomElement &)> &tamper = {})
+                               const std::function<void(QDomElement &)> &tamper   = {},
+                               const QString                            &methodId = OmemoEncryption::methodId())
 {
     auto t    = std::make_unique<Transfer>();
     t->source = std::make_unique<QBuffer>();
@@ -97,6 +99,15 @@ std::unique_ptr<Transfer> send(Endpoint &alice, Endpoint &bob, const QByteArray 
     file.addHash(Hash::from(Hash::Sha256, data));
 
     t->session = alice.client.jingleManager()->newSession(bob.jid);
+    if (preferred) {
+        const bool registered = t->session->setEncryptionMethod(methodId);
+        check(registered == (methodId == OmemoEncryption::methodId()),
+              "Jingle method selection did not reflect method availability");
+        check(t->session->encryptionMethodId() == methodId, "Jingle lost the selected encryption method");
+        if (registered)
+            check(t->session->encryptionSession() != nullptr && t->session->encryptionSession()->methodId() == methodId,
+                  "Jingle did not retain a method-specific encryption session");
+    }
     t->session->setEndToEndPreferred(preferred);
     t->session->setEndToEndRequired(required);
     t->sending = qobject_cast<FT::Application *>(t->session->newContent(FT::NS, J::Origin::Initiator));
@@ -147,8 +158,27 @@ int main(int argc, char **argv)
         auto setUp = wait(endpoint->omemo->setUp(), alice, bob);
         check(setUp->success(), "OMEMO was not set up");
     }
-    J::JetOmemo aliceJet(alice.client.jingleManager(), alice.omemo);
-    J::JetOmemo bobJet(bob.client.jingleManager(), bob.omemo);
+    // Registering the encryption method automatically installs all Jingle adapters.
+    auto *manager = alice.client.jingleManager();
+    auto *registry = alice.client.encryptionManager();
+    check(manager->dtlsVerification() && bob.client.jingleManager()->dtlsVerification()
+              && (!alice.omemo->supportedProtocols().testFlag(OmemoProtocol::Omemo2)
+                  || manager->discoFeatures().contains(J::SXE::SxeOmemo::feature())),
+          "OMEMO registration did not install Jingle adapters");
+    const auto features = manager->discoFeatures();
+    auto *verification = manager->dtlsVerification();
+    check(!registry->registerMethod(alice.omemo) && manager->dtlsVerification() == verification
+              && manager->discoFeatures() == features,
+          "Duplicate method registration changed Jingle adapters");
+
+    // Explicit unregistration must retire adapters even while the method is alive.
+    registry->unregisterMethod(alice.omemo);
+    check(!manager->dtlsVerification() && !manager->discoFeatures().contains(J::SXE::SxeOmemo::feature())
+              && !manager->discoFeatures().contains(J::JetOmemo::ns()),
+          "Jingle adapters survived method unregistration");
+    check(registry->registerMethod(alice.omemo) && manager->dtlsVerification()
+              && manager->discoFeatures() == features,
+          "Re-registering OMEMO did not restore Jingle adapters");
     if (!alice.client.jingleManager()->discoFeatures().contains(J::JetOmemo::ns())) {
         qInfo("JET-OMEMO tests skipped: no legacy OMEMO or AES-GCM/CTR in QCA");
         pep.clear();
@@ -192,6 +222,18 @@ int main(int argc, char **argv)
                   && t->receivingReason.condition() == J::Reason::SecurityError,
               "a tampered file was not refused");
 
+        // A malformed JET envelope is acknowledged as Jingle signaling, but
+        // cryptographic preparation fails before the receiver starts transport.
+        t = send(alice, bob, data, true, false, [](QDomElement &stanza) {
+            auto security = stanza.firstChildElement(QStringLiteral("jingle"))
+                                .elementsByTagNameNS(J::JetOmemo::jetNs(), QStringLiteral("security"));
+            if (!security.isEmpty())
+                security.at(0).toElement().setAttribute(QStringLiteral("cipher"), QStringLiteral("invalid-cipher"));
+        });
+        check(t->offered && t->wire.isEmpty() && !t->receivingEncrypted
+                  && t->receivingReason.condition() == J::Reason::SecurityError,
+              "Invalid JET envelope was accepted or a transfer was started");
+
         // Preferred, but the peer has no JET-OMEMO: the file goes unprotected.
         setPeerFeatures(alice.client, bob.jid, QStringList { QStringLiteral("urn:xmpp:jingle:1") } + legacy);
         t = send(alice, bob, data, true, false);
@@ -202,11 +244,24 @@ int main(int argc, char **argv)
         t = send(alice, bob, data, true, true);
         check(!t->peerSession && t->wire.isEmpty() && (!t->session || t->session->state() == J::State::Finished),
               "a required encryption sent the file to a peer without JET-OMEMO");
+
+        // Never substitute OMEMO or plaintext when another method was selected.
+        setPeerFeatures(alice.client, bob.jid, bob.client.jingleManager()->discoFeatures() + legacy);
+        t = send(alice, bob, data, true, true, {}, QStringLiteral("unavailable-method"));
+        check(!t->peerSession && t->wire.isEmpty() && (!t->session || t->session->state() == J::State::Finished),
+              "required Jingle encryption used the wrong method or sent plaintext");
         qInfo("JET-OMEMO %s passed", omemo2 ? "2" : "legacy");
     }
 
     onStanza = nullptr;
     QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
+    // Destroying the encryption method must unregister its Jingle adapters,
+    // even if a Jingle session remains alive in the manager.
+    delete alice.omemo;
+    alice.omemo = nullptr;
+    check(!manager->dtlsVerification() && !manager->discoFeatures().contains(J::SXE::SxeOmemo::feature())
+              && !manager->discoFeatures().contains(J::JetOmemo::ns()),
+          "Jingle encryption adapter survived its method");
     qInfo("JET-OMEMO tests passed");
     pep.clear();
     return 0;

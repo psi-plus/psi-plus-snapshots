@@ -7,8 +7,9 @@
 #undef main
 
 #include <iris/jingle-ice.h>
-#include <iris/jingle-omemo-verification.h>
+#include <iris/jingle-dtls-omemo.h>
 #include <iris/jingle-session.h>
+#include <iris/jingle-sxe-omemo.h>
 #include <iris/tcpportreserver.h>
 #include <iris/xmpp-im/jingle-sxe.h>
 #include <iris/xmpp_caps.h>
@@ -25,6 +26,8 @@ const QString VerificationNs(QStringLiteral("http://gultsch.de/xmpp/drafts/omemo
 
 void setPeerFeatures(Client &client, const Jid &peer, QStringList features)
 {
+    // Exercise DTLS verification rather than the alternative OMEMO SXE payload transport.
+    features.removeAll(SXE::SxeOmemo::feature());
     features.removeDuplicates();
     DiscoItem disco;
     disco.setJid(peer);
@@ -91,6 +94,8 @@ Run startSession(Endpoint &alice, Endpoint &bob, bool proceed, bool requireEndTo
     auto       connection = QObject::connect(bob.client.jingleManager(), &J::Manager::incomingSession, &bob.client,
                                              [&run, peerRequires](J::Session *session) {
                                            run.peerSession = session;
+                                           check(session->setEncryptionMethod(OmemoEncryption::methodId()),
+                                                 "Incoming DTLS session could not select OMEMO");
                                            session->setEndToEndRequired(peerRequires);
                                        });
     const auto sid = QStringLiteral("omemo-dtls-") + QString::number(QRandomGenerator::global()->bounded(1000000));
@@ -100,6 +105,8 @@ Run startSession(Endpoint &alice, Endpoint &bob, bool proceed, bool requireEndTo
         pump(alice, bob);
     }
     run.session = alice.client.jingleManager()->newSession(bob.jid, sid);
+    check(run.session->setEncryptionMethod(OmemoEncryption::methodId()),
+          "Outgoing DTLS session could not select OMEMO");
     run.session->setEndToEndRequired(requireEndToEnd);
     run.local = qobject_cast<SXE::Application *>(run.session->newContent(SXE::NS_SVG_WHITEBOARD));
     check(run.local, "whiteboard content was not created");
@@ -202,7 +209,9 @@ void exercise(Endpoint &alice, Endpoint &bob, bool omemo2)
     };
     run = startSession(alice, bob, true, false);
     pumpUntil(alice, bob, [&run] { return !run.session || run.session->state() == J::State::Finished; }, 5000);
-    check(!run.peerSession, "a tampered fingerprint was accepted");
+    check(!run.peerSession || run.peerSession->state() == J::State::Finished,
+          "a tampered fingerprint was allowed to start a transport");
+    check(!synchronized(run.local, run.remote), "tampered DTLS authentication exposed application data");
     onStanza = nullptr;
     qInfo("OMEMO %s DTLS verification passed", omemo2 ? "2" : "legacy");
 }
@@ -228,8 +237,9 @@ int main(int argc, char **argv)
         pep.clear();
         return 0;
     }
-    J::OmemoDtlsVerification aliceVerification(alice.client.jingleManager(), alice.omemo);
-    J::OmemoDtlsVerification bobVerification(bob.client.jingleManager(), bob.omemo);
+    check(alice.client.jingleManager()->dtlsVerification()
+              && bob.client.jingleManager()->dtlsVerification(),
+          "The Jingle manager did not register the DTLS verification service");
 
     const auto protocols = alice.omemo->supportedProtocols();
     if (protocols.testFlag(OmemoProtocol::Legacy))
@@ -246,7 +256,6 @@ int main(int argc, char **argv)
         carol.client.jingleManager()->setMessageInitiationEnabled(true);
         auto setUp = wait(carol.omemo->setUp(), alice, carol);
         check(setUp->success(), "OMEMO was not set up");
-        J::OmemoDtlsVerification carolVerification(carol.client.jingleManager(), carol.omemo);
         const QStringList        omemoFeatures { OmemoEncryption::legacyDevicesNode() + QStringLiteral("+notify"),
                                           OmemoEncryption::namespaceUri() };
         setPeerFeatures(alice.client, carol.jid, carol.client.jingleManager()->discoFeatures() + omemoFeatures);
@@ -276,16 +285,15 @@ int main(int argc, char **argv)
         qInfo("OMEMO DTLS verification falls back to legacy OMEMO without an OMEMO 2 bundle");
     }
 
-    // Without a filter nothing can protect the transports: a session requiring it sends nothing.
-    alice.client.jingleManager()->removeSignalingFilter(&aliceVerification);
+    // Simulate an unavailable DTLS verifier while keeping the OMEMO method registered.
+    delete alice.client.jingleManager()->dtlsVerification();
     Wire unfiltered;
     onStanza = [&unfiltered](const Endpoint &, QDomElement &stanza) { unfiltered.plain += inspect(stanza).plain; };
     auto run = startSession(alice, bob, false, true);
     pumpUntil(alice, bob, [&run] { return !run.session || run.session->state() == J::State::Finished; }, 5000);
     check(unfiltered.plain == 0 && !run.peerSession && (!run.session || run.session->state() == J::State::Finished),
-          "a session requiring end-to-end encryption ran without a signaling filter");
+          "a session requiring end-to-end encryption ran without a DTLS verifier");
     onStanza = nullptr;
-    alice.client.jingleManager()->addSignalingFilter(&aliceVerification);
     QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
     qInfo("OMEMO DTLS verification tests passed");
     pep.clear();

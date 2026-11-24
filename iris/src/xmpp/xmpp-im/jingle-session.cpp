@@ -26,6 +26,7 @@
 #include "xmpp/jid/jid.h"
 #include "xmpp_caps.h"
 #include "xmpp_client.h"
+#include "xmpp_encryption.h"
 #include "xmpp_stream.h"
 #include "xmpp_task.h"
 #include "xmpp_xmlcommon.h"
@@ -226,6 +227,8 @@ namespace XMPP { namespace Jingle {
         Jid     otherParty; // either "from" or initiator/responder. it's where to send all requests.
         Jid     localParty; // that one will be set as initiator/responder if provided
         Session::PeerAuthentication peerAuthentication;
+        QString                     encryptionMethodId;
+        QPointer<EncryptedSession>  encryptionSession;
         bool                        endToEndRequired         = false;
         bool                        endToEndPreferred        = false;
         bool                        waitingAck               = false;
@@ -243,6 +246,10 @@ namespace XMPP { namespace Jingle {
             state = State::Finished;
             stepTimer.stop();
             peerUnavailableTimer.stop();
+            if (encryptionSession) {
+                encryptionSession->close();
+                encryptionSession = nullptr;
+            }
             waitingAck = false;
             q->tieBreaker()->clear();
             if (!guard)
@@ -1224,6 +1231,10 @@ namespace XMPP { namespace Jingle {
             }
 
             const bool installed = app->setTransport(std::get<2>(trpr));
+            if (!session || !app)
+                return result { Unparsed, Reason::Success, nullptr };
+            if (installed && !app->setRemoteContentExtensions(ce))
+                return result { Unparsed, Reason::Success, nullptr };
             if (!session || !app)
                 return result { Unparsed, Reason::Success, nullptr };
             appReleaser.applications.clear(); // The pad remains the sole lifetime owner.
@@ -2801,6 +2812,8 @@ namespace XMPP { namespace Jingle {
 
     Session::~Session()
     {
+        if (d->encryptionSession)
+            d->encryptionSession->close();
         setParent(nullptr);
         d->manager->detachSession(this);
         d->state = State::Finished;
@@ -2864,6 +2877,56 @@ namespace XMPP { namespace Jingle {
     void Session::setEndToEndPreferred(bool preferred) { d->endToEndPreferred = preferred; }
 
     bool Session::isEndToEndPreferred() const { return d->endToEndPreferred || d->endToEndRequired; }
+
+    bool Session::setEncryptionMethod(const QString &methodId)
+    {
+        if (d->encryptionMethodId == methodId)
+            return methodId.isEmpty() || (d->encryptionSession && !d->encryptionSession->isClosing());
+        if (d->state != State::Created)
+            return false;
+
+        if (d->encryptionSession) {
+            d->encryptionSession->close();
+            d->encryptionSession = nullptr;
+        }
+        d->encryptionMethodId = methodId;
+        return methodId.isEmpty() || startEncryptionSession(methodId);
+    }
+
+    bool Session::ensureEncryptionMethod(const QString &methodId)
+    {
+        // A negotiated transport may bind an as yet unspecified method, but never replace a selected one.
+        if (methodId.isEmpty() || d->state >= State::Finishing)
+            return false;
+        if (!d->encryptionMethodId.isEmpty())
+            return d->encryptionMethodId == methodId && d->encryptionSession && !d->encryptionSession->isClosing();
+        d->encryptionMethodId = methodId;
+        return startEncryptionSession(methodId);
+    }
+
+    bool Session::startEncryptionSession(const QString &methodId)
+    {
+        auto *registry = d->manager->client()->encryptionManager();
+        auto *method   = registry->method(methodId);
+        if (!method || !method->capabilities().testFlag(EncryptionMethod::XmppStanza))
+            return false;
+
+        EncryptionContext context;
+        context.recipients      = { peer() };
+        const auto capabilities = method->capabilities()
+            & EncryptionMethod::Capabilities(EncryptionMethod::XmppStanza | EncryptionMethod::DataStream);
+        d->encryptionSession = registry->startSession(methodId, capabilities, context);
+        return d->encryptionSession != nullptr;
+    }
+
+    QString Session::encryptionMethodId() const { return d->encryptionMethodId; }
+
+    EncryptedSession *Session::encryptionSession() const { return d->encryptionSession; }
+
+    bool Session::allowsEncryptionMethod(const QString &methodId) const
+    {
+        return d->encryptionMethodId.isEmpty() || (d->encryptionMethodId == methodId && d->encryptionSession);
+    }
 
     bool Session::checkPeerCaps(const QString &ns) const
     {
@@ -3269,6 +3332,16 @@ namespace XMPP { namespace Jingle {
     void Session::accept()
     {
         Q_ASSERT(d->role == Origin::Responder && d->state == State::Created);
+        // Incoming initial signaling is filtered before the application selects
+        // its method. Do not accept a previously authenticated offer from
+        // another method, or an unavailable required method.
+        if (!d->encryptionMethodId.isEmpty()
+            && ((d->endToEndRequired && !d->encryptionSession)
+                || (d->peerAuthentication.isValid() && d->peerAuthentication.method != d->encryptionMethodId))) {
+            terminate(Reason::SecurityError,
+                      QStringLiteral("Selected Jingle encryption method unavailable or mismatched"));
+            return;
+        }
         // So we presented a user incoming session in UI, the user modified it somehow and finally accepted.
         d->state = State::ApprovedToSend;
         d->notifyPads<&SessionManagerPad::onLocalAccepted>();
@@ -3296,6 +3369,13 @@ namespace XMPP { namespace Jingle {
 
     void Session::initiate()
     {
+        if (d->role == Origin::Initiator && d->state == State::Created && d->endToEndRequired
+            && !d->encryptionMethodId.isEmpty() && !d->encryptionSession) {
+            d->terminateReason
+                = Reason(Reason::SecurityError, QStringLiteral("Selected Jingle encryption method unavailable"));
+            d->setSessionFinished();
+            return;
+        }
         emit initiated();
         if (d->role == Origin::Initiator && d->state == State::Created) {
             d->state = State::ApprovedToSend;

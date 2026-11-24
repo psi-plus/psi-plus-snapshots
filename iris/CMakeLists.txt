@@ -217,6 +217,7 @@ endif()
 
 if(IRIS_BUILD_TESTS)
     add_subdirectory(tests/jingle)
+    add_subdirectory(tests/muc)
     add_subdirectory(tests/mam)
     add_subdirectory(tests/message)
     add_subdirectory(tests/net)
@@ -279,14 +280,14 @@ if(IRIS_ENABLE_INSTALL)
     # src/xmpp and src/irisnet into ${IRIS_INSTALL_INCLUDEDIR}/{xmpp-core,xmpp-im,jid,irisnet/...}.
     file(GLOB IRIS_COMPAT_HEADERS "${CMAKE_CURRENT_SOURCE_DIR}/include/iris/*.h")
     list(REMOVE_ITEM IRIS_COMPAT_HEADERS "${CMAKE_CURRENT_SOURCE_DIR}/include/iris/xmpp_omemo.h"
-         "${CMAKE_CURRENT_SOURCE_DIR}/include/iris/jingle-omemo-verification.h"
+         "${CMAKE_CURRENT_SOURCE_DIR}/include/iris/jingle-dtls-omemo.h"
          "${CMAKE_CURRENT_SOURCE_DIR}/include/iris/jingle-jet-omemo.h"
          "${CMAKE_CURRENT_SOURCE_DIR}/include/iris/jingle-sxe-omemo.h"
          "${CMAKE_CURRENT_SOURCE_DIR}/include/iris/jingle-sctp.h")
     install(FILES ${IRIS_COMPAT_HEADERS} DESTINATION ${IRIS_INSTALL_INCLUDEDIR})
     if(IRIS_ENABLE_OMEMO)
         install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/include/iris/xmpp_omemo.h"
-                      "${CMAKE_CURRENT_SOURCE_DIR}/include/iris/jingle-omemo-verification.h"
+                      "${CMAKE_CURRENT_SOURCE_DIR}/include/iris/jingle-dtls-omemo.h"
                       "${CMAKE_CURRENT_SOURCE_DIR}/include/iris/jingle-jet-omemo.h"
                       "${CMAKE_CURRENT_SOURCE_DIR}/include/iris/jingle-sxe-omemo.h"
                 DESTINATION ${IRIS_INSTALL_INCLUDEDIR})

@@ -94,3 +94,10 @@ target_link_libraries(message_styling_test PRIVATE iris Qt${QT_DEFAULT_MAJOR_VER
     Qt${QT_DEFAULT_MAJOR_VERSION}::Xml)
 add_test(NAME message_styling COMMAND message_styling_test)
 set_tests_properties(message_styling PROPERTIES TIMEOUT 10)
+
+# DataStream session routing, ordering, finalization and fail-closed regressions.
+add_executable(message_encryptionstream_test encryptionstream.cpp)
+target_link_libraries(message_encryptionstream_test PRIVATE iris Qt${QT_DEFAULT_MAJOR_VERSION}::Core
+    Qt${QT_DEFAULT_MAJOR_VERSION}::Xml)
+add_test(NAME message_encryptionstream COMMAND message_encryptionstream_test)
+set_tests_properties(message_encryptionstream PROPERTIES TIMEOUT 10)

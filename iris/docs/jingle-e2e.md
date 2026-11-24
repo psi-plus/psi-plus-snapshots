@@ -20,6 +20,37 @@ DTLS alone is not end-to-end: its fingerprint travels in Jingle signaling throug
 a server can replace it and sit in the middle. It becomes end-to-end once the fingerprint is
 authenticated with the peer's OMEMO identity.
 
+
+The Jingle manager observes the client's encryption registry. Registering
+the built-in OMEMO method automatically installs its JET and
+DTLS-verification adapters; unregistering or destroying the method removes
+them. The manager also destroys them before its transport registries.
+OMEMO itself does not depend on Jingle, and applications do not need to
+enable or manage these adapters explicitly.
+
+An application passes its selected method ID to
+`Jingle::Session::setEncryptionMethod(methodId)` **before** starting the
+negotiation, along with its desired preferred/required E2EE policy. Iris
+creates and holds the associated `EncryptedSession` via the registry,
+and releases it when Jingle terminates. A method that is unregistered
+while the session is active cannot be silently replaced by OMEMO.
+
+JET-OMEMO and DTLS verification operate only for an OMEMO-selected (or
+legacy unselected) Jingle session. The SXE message transport uses the
+selected Jingle `EncryptedSession` to encrypt/decrypt a synthetic message.
+Its stateless OMEMO 2 adapter preserves the negotiated wire profile and
+extracts the envelope or inner SXE element. No separate registry of
+encryption methods or per-payload encryption sessions is needed. A
+protected offer may bind a previously unspecified method but cannot
+replace a selected one. Unregistration stops protected SXE transports
+and suppresses outstanding payloads. When E2EE is required, an unavailable
+or mismatched method fails negotiation without sending plaintext.
+
+The existing OMEMO element wrapping for JET keys and DTLS fingerprints
+remains method-specific. Binding those element operations directly to
+the long-lived Jingle encryption session is the next step; this stage
+does not change the JET-OMEMO or Conversations-compatible wire format.
+
 ## Specifications
 
 | Specification | Status | Relevance |
@@ -131,31 +162,52 @@ Conversations `Content.setSecurity()/getSecurity()`, `JingleFileTransferConnecti
   ends the session. `MessageInitiation` keeps foreign extensions (`extensions()`, `addExtension()`).
 - `Session::setEndToEndRequired()` is the local policy; `Session::peerAuthentication()` (method,
   device, identity key, trust level) records who authenticated the peer's DTLS fingerprints.
-- `Jingle::OmemoDtlsVerification` (built with OMEMO) is that filter for OMEMO, in the wire format of
-  Conversations and Dino:
+- `Jingle::OmemoDtlsVerification` is registered with `Jingle::Manager` as an optional
+  DTLS fingerprint service. The ICE transport parses `<transport/>` and recognizes
+  either a plain fingerprint or its protected OMEMO variant. Only the individual
+  fingerprint is passed to the service; it does not scan or rewrite complete Jingle
+  IQs. The wire format remains compatible with Conversations and Dino:
   - outgoing `<proceed/>` gets our `<device/>`; the device in a received `<proceed/>` is the peer
     device of that session;
   - outgoing DTLS fingerprints of ICE transports (`ice:0` and `ice-udp:1`) are encrypted for that
     device, in OMEMO 2 when the peer advertises it, otherwise in the legacy profile; without a
     device they stay plain, unless the session requires end-to-end encryption;
-  - incoming encrypted fingerprints are decrypted and replaced by plain ones before Jingle sees
-    them; all of a session must come from one device, which then also receives our fingerprints;
-  - a session requiring end-to-end encryption refuses plain fingerprints, transports without DTLS,
-    untrusted devices and fingerprints it cannot encrypt, with `not-acceptable`. A responder
-    learns the requirement after the `session-initiate` has been parsed, so its answer is refused
-    unless the initiator's fingerprints were verified by a trusted device.
-- Without any signaling filter, Jingle IQs with contents of a session requiring end-to-end
-  encryption are refused in both directions: nothing can protect them.
+  - incoming protected fingerprints remain in the parsed ICE update until an asynchronous
+    verification completes; only then is the decrypted fingerprint applied to the
+    ICE/DTLS association. Signaling IQ acknowledgements do not wait for OMEMO;
+    ICE preparation and startup do.
+  - verified fingerprints in a session must come from one authenticated device;
+    the responder encrypts its own fingerprint to that device;
+  - a session requiring end-to-end encryption refuses plaintext fingerprints,
+    missing DTLS, untrusted peers and encryption failures with `security-error`.
+    A responder can decide its local policy after parsing the incoming
+    `session-initiate`, without needing a pre-session cryptographic cache.
+- Without a compatible DTLS verification service, required end-to-end encryption
+  fails closed unless an application protects its payload separately (e.g. JET
+  file transfer). Unprotected RTP and other content is still refused.
   `tests/jingle/omemodtls.cpp` runs a whiteboard on an ICE data channel between two clients in both
   profiles: verified fingerprints only on the wire and a recorded authentication on both sides; a
   session requiring end-to-end encryption without a peer device sends nothing and ends; without
   the requirement fingerprints stay plain; a responder requiring it does not answer a plain
-  fingerprint; a tampered fingerprint is refused; without a filter a session requiring it sends
-  nothing.
+  fingerprint; a tampered fingerprint cannot start DTLS; without a verifier a
+  session requiring it sends nothing.
 - `Session::setEndToEndPreferred()` asks for protection where possible without refusing otherwise
   (a session requiring it prefers it too). Signaling filters can add disco features
   (`SignalingFilter::discoFeatures()`).
-- `Jingle::JetOmemo` (built with OMEMO) is JET-OMEMO for file transfer, in the format of
+- `Jingle::JET::Manager` is an always-present Jingle service that registers
+  XEP-0391 key-delivery providers and advertises their disco features. It does
+  not own Jingle sessions or create OMEMO providers. `JET::Pad` belongs to a
+  Jingle session and selects a provider using its negotiated encryption method.
+  `JET::Protection` belongs to one content, retains its own envelope and keys,
+  and prepares them asynchronously before the transport is offered or accepted.
+  No Jingle-IQ pre-parse JET filter or (peer, sid) pending-key cache exists.
+- `JET::Connection` wraps a `Jingle::Connection::Ptr`: FileTransfer receives
+  plaintext through the same interface irrespective of ICE, S5B or IBB.
+  The wrapper handles AES-GCM, the final 16-byte tag, data framing and errors.
+  One content key/IV may protect only one stream: transport replacement cannot
+  silently reuse that pair. This implementation requires the exact plaintext
+  length and does not offer indefinite-stream or ranged-transfer protection.
+- `Jingle::JetOmemo` implements only the XEP-0396 `JET::KeyTransport` adapter in the format of
   Conversations and Dino:
   - for file-transfer contents it creates in a session that prefers or requires end-to-end
     encryption, it adds `<security xmlns='urn:xmpp:jingle:jet:0' name cipher type>` with an OMEMO
@@ -166,15 +218,23 @@ Conversations `Content.setSecurity()/getSecurity()`, `JingleFileTransferConnecti
     SCE envelope holding `<secret xmlns='urn:xmpp:jingle:jet-omemo:0' key iv/>` and AES-256-GCM (a
     Psi extension, see `xsf-proposals/`); otherwise legacy OMEMO with a key transport message and
     AES-128-GCM, as Conversations and Dino;
-  - received envelopes are decrypted and their key given to the content when it exists;
-  - it must be registered before `OmemoDtlsVerification`, which treats JET contents as protected.
-- `FileTransfer::Application::setTransportSecret()` encrypts the whole transfer as AES-GCM with the
-  16-byte tag appended (`JET::StreamCipher`, `jingle-jet_p.h`); size and hashes describe the plain
-  file. The receiver decrypts with AES-CTR from the counter block IV‖2 and checks the tag by
-  encrypting the plaintext again with GCM, since QCA needs a GCM tag before decryption; a wrong tag
-  ends the content with `security-error`, and the data written before is to be discarded. Ranged
-  and streaming transfers are refused.
-- `tests/jingle/jetcipher.cpp` checks the cipher against QCA's GCM decoder with any chunking,
+  - received envelopes are retained only by their parsed file-transfer content;
+    they are decrypted during that content's preparation. An IQ result need not
+    wait for the cryptographic job, but a transfer must.
+  - Jingle's common protection policy recognizes JET-protected file content;
+    `OmemoDtlsVerification` knows only how to protect and authenticate fingerprints.
+  - adding another JET key-delivery method does not require a signaling
+    filter or a duplicate file-transfer implementation.
+- `FileTransfer::Application` holds only a `JET::Protection` and a
+  `Jingle::Connection::Ptr`; it neither handles key/IV nor appends/strips a GCM
+  tag. File sizes and checksums remain those of the plaintext. The protected
+  connection decrypts with AES-CTR from IV‖2 and checks the tag by re-encrypting
+  the plaintext with GCM (the QCA API needs the tag before GCM decryption).
+  Authentication failures end the content with `security-error`; any bytes
+  previously exposed are untrusted and must be discarded.
+- `tests/jingle/jetconnection.cpp` checks stream and datagram wrappers,
+  zero-length records, tampered and missing tags, and their transparent
+  plaintext lengths. `tests/jingle/jetcipher.cpp` checks the cipher against QCA's GCM decoder with any chunking,
   tampering and truncation; `tests/jingle/omemojet.cpp` sends a file over IBB between two clients
   with OMEMO: ciphertext with the tag on the wire, the plain file at the end, a tampered block
   refused, preferred encryption falling back without peer support and required encryption sending
@@ -195,12 +255,12 @@ Conversations `Content.setSecurity()/getSecurity()`, `JingleFileTransferConnecti
    end-to-end. Transport selection and fallback skip transports that cannot reach end-to-end
    under the policy; a content that ends up without protection is rejected or removed with
    `security-error`, and the application shows why.
-3. **OMEMO-verified DTLS** (done in Iris; Psi has to create the filter and show the result). Compatible with Conversations and Dino: the device id in XEP-0353
+3. **OMEMO-verified DTLS** (done in Iris; Psi supplies its UI policy and shows the result). Compatible with Conversations and Dino: the device id in XEP-0353
    `<proceed/>`, encrypted fingerprints in `session-initiate`, `session-accept`, `content-add`,
    `content-accept` and `transport-replace` of ICE transports. Iris also applies it to `ice:0`
    transports and to SCTP data channels (file transfer, whiteboards), which share the DTLS
    association; Conversations and Dino only look at `ice-udp:1`.
-4. **JET-OMEMO for files** (done in Iris, on any transport; Psi has to create the filter). Compatible format and whole-stream AES-128-GCM, with the
+4. **JET-OMEMO for files** (done in Iris, on any transport). Compatible format and whole-stream AES-128-GCM, with the
    received file kept unverified until the tag matches.
 5. **SXE payload in messages** (done in Iris): `SXE::SxeOmemo` protects every `<sxe/>` with OMEMO 2
    and SCE when both sides advertise `urn:xmpp:sxe:0#omemo`; the SXE transport then carries

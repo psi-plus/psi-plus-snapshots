@@ -23,6 +23,10 @@
 #include "jingle-rtp.h"
 
 #include "jingle-application.h"
+#include "jingle-ft.h"
+#include "jingle-ice.h"
+#include "jingle-jet.h"
+#include "jingle-dtls-omemo.h"
 #include "jingle-session.h"
 #include "xmpp-im/xmpp_hash.h"
 #include "xmpp/jid/jid.h"
@@ -31,6 +35,12 @@
 #include "xmpp_stream.h"
 #include "xmpp_task.h"
 #include "xmpp_xmlcommon.h"
+
+#ifdef IRIS_ENABLE_OMEMO
+#include "jingle-jet-omemo.h"
+#include "xmpp_encryption.h"
+#include "xmpp_omemo.h"
+#endif
 
 #include <QDateTime>
 #include <QDebug>
@@ -606,6 +616,11 @@ namespace XMPP { namespace Jingle {
         QHash<QPair<Jid, QString>, Session *> sessions;
         std::unique_ptr<PublicationManager>   publicationManager;
         std::unique_ptr<RTP::Manager>         rtpManager;
+        QPointer<JET::Manager>                jet;
+#ifdef IRIS_ENABLE_OMEMO
+        QPointer<OmemoDtlsVerification>       dtlsVerification;
+        QObject *omemoAdapters = nullptr;
+#endif
         bool                                  messageInitiationEnabled = false;
         int                                   maxSessions              = -1; // no limit
 
@@ -728,6 +743,27 @@ namespace XMPP { namespace Jingle {
         d->publicationManager = std::make_unique<PublicationManager>(this);
         d->rtpManager         = std::make_unique<RTP::Manager>();
         registerApplication(d->rtpManager.get());
+        d->jet = new JET::Manager(this);
+
+#ifdef IRIS_ENABLE_OMEMO
+        auto *encryption = client->encryptionManager();
+        connect(encryption, &EncryptionManager::methodRegistered, this, [this, encryption](const QString &id) {
+            if (id != OmemoEncryption::methodId() || d->omemoAdapters || d->shuttingDown)
+                return;
+            auto *omemo = qobject_cast<OmemoEncryption *>(encryption->method(id));
+            if (!omemo)
+                return;
+            d->omemoAdapters = new QObject(this);
+            new JetOmemo(this, omemo, d->omemoAdapters);
+            new OmemoDtlsVerification(this, omemo, d->omemoAdapters);
+        });
+        connect(encryption, &EncryptionManager::methodUnregistered, this, [this](const QString &id) {
+            if (id == OmemoEncryption::methodId()) {
+                delete d->omemoAdapters;
+                d->omemoAdapters = nullptr;
+            }
+        });
+#endif
 
         connect(d->client, &Client::messageReceived, this, [this](const Message &message) {
             // Carbons wrap the protocol message in a forwarding envelope. JMI
@@ -749,7 +785,15 @@ namespace XMPP { namespace Jingle {
 
     Manager::~Manager()
     {
+#ifdef IRIS_ENABLE_OMEMO
+        disconnect(d->client->encryptionManager(), nullptr, this, nullptr);
+#endif
         shutdown();
+#ifdef IRIS_ENABLE_OMEMO
+        // Unregister adapters while the JET registry is still alive.
+        delete d->omemoAdapters;
+        d->omemoAdapters = nullptr;
+#endif
         for (auto &m : d->transportManagers)
             m.second->setJingleManager(nullptr);
         for (auto &m : d->applicationManagers)
@@ -794,6 +838,24 @@ namespace XMPP { namespace Jingle {
 
     PublicationManager *Manager::publicationManager() const { return d->publicationManager.get(); }
     RTP::Manager       *Manager::rtpManager() const { return d->rtpManager.get(); }
+    JET::Manager       *Manager::jet() const { return d->jet.data(); }
+    OmemoDtlsVerification *Manager::dtlsVerification() const
+    {
+#ifdef IRIS_ENABLE_OMEMO
+        return d->dtlsVerification.data();
+#else
+        return nullptr;
+#endif
+    }
+
+#ifdef IRIS_ENABLE_OMEMO
+    void Manager::registerDtlsVerification(OmemoDtlsVerification *verifier)
+    {
+        Q_ASSERT(verifier);
+        Q_ASSERT(!d->dtlsVerification || d->dtlsVerification == verifier);
+        d->dtlsVerification = verifier;
+    }
+#endif
 
     bool Manager::messageInitiationEnabled() const { return d->messageInitiationEnabled; }
 
@@ -839,6 +901,10 @@ namespace XMPP { namespace Jingle {
         auto decorated = initiation;
         for (auto filter : std::as_const(d->filters))
             filter->decorateMessageInitiation(to, decorated);
+#ifdef IRIS_ENABLE_OMEMO
+        if (auto *verifier = dtlsVerification())
+            verifier->decorateMessageInitiation(to, decorated);
+#endif
 
         Message message(to);
         message.setType(Message::Type::Chat);
@@ -856,6 +922,62 @@ namespace XMPP { namespace Jingle {
 
     void Manager::removeSignalingFilter(SignalingFilter *filter) { d->filters.removeAll(filter); }
 
+    // Jingle has already identified each content's application and transport.
+    // Enforce the required-E2EE policy at this common signaling boundary; the
+    // selected transport/application performs cryptographic preparation itself.
+    static bool protectedContents(Manager *manager, Session *session, const QDomElement &jingle)
+    {
+        if (!session)
+            return false;
+
+        bool found = false;
+        for (auto content = jingle.firstChildElement(QStringLiteral("content")); !content.isNull();
+             content      = content.nextSiblingElement(QStringLiteral("content"))) {
+            found                         = true;
+            const auto        transport   = content.firstChildElement(QStringLiteral("transport"));
+            const auto        description = content.firstChildElement(QStringLiteral("description"));
+            // Content-modify and description-info do not replace the existing
+            // transport, and therefore cannot weaken its security association.
+            if (transport.isNull())
+                continue;
+            const ContentBase key(content);
+            auto             *application = key.isValid() ? session->content(key.name, key.creator) : nullptr;
+            auto             *file        = qobject_cast<FileTransfer::Application *>(application);
+
+            if (file && file->isTransportEncrypted())
+                continue;
+            if (description.namespaceURI() == FileTransfer::NS && manager->jet()) {
+                bool hasSecurity = false;
+                for (auto sec = content.firstChildElement(QStringLiteral("security")); !sec.isNull();
+                     sec      = sec.nextSiblingElement(QStringLiteral("security"))) {
+                    if (sec.namespaceURI() == JET::Manager::ns()) {
+                        hasSecurity = true;
+                        break;
+                    }
+                }
+                if (hasSecurity)
+                    continue;
+            }
+            if (transport.namespaceURI() == QLatin1String("urn:xmpp:jingle:transports:sxe")
+                && transport.hasAttribute(QStringLiteral("encryption")))
+                continue;
+
+            if (transport.namespaceURI() == ICE::NS || transport.namespaceURI() == ICE::NS_ICE_UDP) {
+                const auto fingerprint = transport.firstChildElement(QStringLiteral("fingerprint"));
+                if (!fingerprint.isNull() && fingerprint.namespaceURI() == QLatin1String("http://gultsch.de/xmpp/drafts/omemo/dlts-srtp-verification")
+                    && manager->dtlsVerification())
+                    continue;
+                // Candidate-only updates do not change the established DTLS
+                // fingerprint; the transport still enforces its authenticated
+                // peer association.
+                if (fingerprint.isNull() && description.isNull())
+                    continue;
+            }
+            return false;
+        }
+        return found;
+    }
+
     void Manager::receiveFiltered(const QDomElement &iq)
     {
         if (d->filters.isEmpty()) {
@@ -864,7 +986,8 @@ namespace XMPP { namespace Jingle {
             const auto session
                 = this->session(Jid(iq.attribute(QStringLiteral("from"))), jingle.attribute(QStringLiteral("sid")));
             if (session && session->isEndToEndRequired()
-                && !jingle.firstChildElement(QStringLiteral("content")).isNull()) {
+                && !jingle.firstChildElement(QStringLiteral("content")).isNull()
+                && !protectedContents(this, session, jingle)) {
                 d->pushTask->respondError(iq,
                                           Stanza::Error(Stanza::Error::ErrorType::Cancel,
                                                         Stanza::Error::ErrorCond::NotAcceptable,
@@ -901,7 +1024,8 @@ namespace XMPP { namespace Jingle {
             const auto jingle  = iq.firstChildElement(QStringLiteral("jingle"));
             const auto session = this->session(to, jingle.attribute(QStringLiteral("sid")));
             if (session && session->isEndToEndRequired()
-                && !jingle.firstChildElement(QStringLiteral("content")).isNull())
+                && !jingle.firstChildElement(QStringLiteral("content")).isNull()
+                && !protectedContents(this, session, jingle))
                 send({},
                      Stanza::Error(Stanza::Error::ErrorType::Cancel, Stanza::Error::ErrorCond::NotAcceptable,
                                    QStringLiteral("No end-to-end encryption available")));
@@ -1052,6 +1176,8 @@ namespace XMPP { namespace Jingle {
         }
         for (auto filter : d->filters)
             ret += filter->discoFeatures();
+        if (auto *jet = d->jet.data())
+            ret += jet->discoFeatures();
         ret.removeDuplicates();
         return ret;
     }

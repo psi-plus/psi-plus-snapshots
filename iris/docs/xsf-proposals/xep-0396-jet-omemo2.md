@@ -60,5 +60,8 @@ profile wherever it handles the legacy one.
 
 ## Iris
 
-Implemented in `Jingle::JetOmemo` (`jingle-jet-omemo.cpp`) and tested in
+The generic XEP-0391 `Jingle::JET::Jet` filter handles Jingle signaling,
+`<security/>` and file-transfer key installation. `Jingle::JetOmemo`
+(`jingle-jet-omemo.cpp`) implements only the XEP-0396 OMEMO key-transport profile.
+Both profiles are tested in
 `tests/jingle/omemojet.cpp` for both profiles.

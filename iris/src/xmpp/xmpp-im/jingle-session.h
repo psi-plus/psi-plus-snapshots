@@ -32,10 +32,13 @@
 #include <functional>
 #include <memory>
 
-namespace XMPP { namespace Jingle {
+namespace XMPP {
+class EncryptedSession;
+namespace Jingle {
 
     // class Manager;
     class Application;
+    namespace SXE { class Transport; }
 
     // Ordered XEP-0338 group. Multiple groups may have the same semantics.
     struct ContentGroup {
@@ -77,8 +80,8 @@ namespace XMPP { namespace Jingle {
 
         std::optional<Stanza::Error> lastError() const;
 
-        /// Authentication of the session's DTLS fingerprints by an end-to-end method, set by a signaling
-        /// filter such as OmemoDtlsVerification (docs/jingle-e2e.md).
+        /// Identity authenticated by the DTLS fingerprint verification service
+        /// after the ICE transport has validated the decrypted fingerprint.
         struct PeerAuthentication {
             QString    method;         // e.g. "omemo"
             quint32    deviceId = 0;   // the peer's device
@@ -89,14 +92,26 @@ namespace XMPP { namespace Jingle {
         PeerAuthentication peerAuthentication() const;
         void               setPeerAuthentication(const PeerAuthentication &authentication);
 
-        /// Local policy: the session uses only end-to-end protected transports. A signaling filter that
-        /// can protect them refuses everything else with security-error; without one nothing is sent.
+        /// Local policy: the session uses only end-to-end protected transports.
+        /// ICE prepares authenticated DTLS fingerprints, while JET file transfers
+        /// prepare their keys in the application; unprotected contents are refused.
         void setEndToEndRequired(bool required);
         bool isEndToEndRequired() const;
         /// Local wish: protect what can be protected (e.g. JET for files) but run unprotected otherwise.
         /// A session that requires end-to-end encryption prefers it as well.
         void setEndToEndPreferred(bool preferred);
         bool isEndToEndPreferred() const;
+
+        /**
+         * Select the encryption method for this Jingle negotiation before it starts.
+         * The requested method remains explicit even when it is unavailable, so
+         * required end-to-end encryption can never silently choose another method.
+         * The associated encryption session lives in Iris's encryption registry.
+         */
+        bool              setEncryptionMethod(const QString &methodId);
+        QString           encryptionMethodId() const;
+        EncryptedSession *encryptionSession() const;
+        bool              allowsEncryptionMethod(const QString &methodId) const;
 
         TieBreaker       *tieBreaker();
         const TieBreaker *tieBreaker() const;
@@ -173,6 +188,10 @@ namespace XMPP { namespace Jingle {
         friend class TransportManagerPad;
         friend class PublicationManager;
         friend class JTPush;
+        friend class SXE::Transport;
+
+        bool ensureEncryptionMethod(const QString &methodId);
+        bool startEncryptionSession(const QString &methodId);
 
         void    noteIncomingActivity();
         void    shutdown();
@@ -192,6 +211,7 @@ namespace XMPP { namespace Jingle {
         class Private;
         std::unique_ptr<Private> d;
     };
-}}
+}
+}
 
 #endif // JINGLE_SESSION_H

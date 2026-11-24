@@ -79,6 +79,7 @@ public:
     EncryptedSession *startSession(Capabilities caps, const EncryptionContext &context) override;
     Features          features() const override;
     bool              canDecrypt(const QDomElement &stanza) const override;
+    Availability      availability(const Jid &peer) const override;
     EncryptionJob    *prepareDecryptionRecovery(const EncryptionMetadata &metadata) override;
     EncryptionJob    *recoverDecryption(const EncryptionMetadata &metadata) override;
 

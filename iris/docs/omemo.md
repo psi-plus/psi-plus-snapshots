@@ -7,12 +7,73 @@ runtime `EncryptionMethod` objects and advertise one or more capabilities:
 
 - `XmppStanza` — XMPP stanza encryption. OMEMO implements this capability.
 - `DataMessage` — an independent byte message processed at once.
-- `DataStream` — reserved for incremental/file/media encryption adapters.
+- `DataStream` — incremental encryption/decryption with explicit finalization
+  and stream authentication.
 
-`EncryptedSession` is deliberately protocol-neutral. Network-dependent methods may
-return an unfinished `EncryptionJob` while they fetch key material. This keeps XMPP
-`Task` as the network primitive and avoids making cryptographic session objects own
-network state.
+`EncryptionManager` is the authoritative registry of encryption methods and a session
+factory. It selects methods by the **entire** requested set of capabilities, reports
+method-specific peer availability, and closes sessions when their methods are
+unregistered. It does not execute cryptographic operations or own stream state.
+
+`EncryptionMethod` implements one protocol (such as OMEMO) and advertises its
+capabilities and availability. Its `startSession()` creates an `EncryptedSession` for
+a specific use. A session can support multiple capabilities simultaneously, e.g.
+protecting Jingle signaling and the stream tied to it.
+
+`EncryptedSession` owns the requested operation capabilities, active jobs, session
+closing, and stream state. Its public `encrypt()`, `decrypt()`, `encryptChunk()`,
+and `decryptChunk()` methods validate and track operations, delegating cryptography
+to protected virtual `doEncrypt*` and `doDecrypt*` implementations. Chunk calls
+are sequential; a final successful decryption is required for authentication, and
+intermediate decrypted bytes must not be exposed as verified content.
+
+Network-dependent methods may return an unfinished `EncryptionJob` while they
+fetch key material. This keeps XMPP `Task` as the network primitive and avoids
+making cryptographic session objects own network state. Psi may adapt plugin-provided
+methods into this Iris registry and expose UI controls; encryption protocol policy
+and processing belong in Iris.
+
+### Lifetime and peer identity
+
+`Client` does not maintain a parallel JID/resource table. An application installs
+`Client::setIncomingEncryptedStanzaHandler()`: Iris passes an encrypted stanza,
+method ID, operation context and purpose to the application, which chooses or
+creates its own `EncryptedSession` and returns the decryption job. The
+application may reuse sessions attached to existing contacts and MUC occupants,
+or create operation-local sessions for unknown senders and archive replay.
+Unresolved requests fail closed; Iris never creates provisional contacts.
+
+The application creates/reuses stanza sessions using
+`EncryptionManager::startSession()` and closes them on the corresponding
+contact/resource/operation lifecycle. `EncryptionManager` remains the method
+registry and session factory, and closes all sessions for an unregistered
+method; it is not a conversation or resource directory.
+
+Jingle and other protocols with a known operation owner **pass their bound
+`EncryptedSession` explicitly**, rather than looking it up by JID. Method-only
+outgoing calls use an operation-local session and close it when no longer needed.
+Incoming Jingle IQs reach `JTPush` through the existing `Task` dispatcher and
+are routed by (peer, sid). JET security is attached to the selected file-transfer
+content during `Session::parseContentAddList()` and decrypted during
+`FileTransfer::Application::prepare()`, not by a separate signaling pre-filter.
+DTLS fingerprint verification is performed by the selected ICE transport
+after parsing the content and before using the peer fingerprint, via the
+Jingle manager's optional `OmemoDtlsVerification` service. No DTLS filter
+rescans the complete Jingle XML, and there is no global (peer, sid) cache
+of pending DTLS authentication or JET keys.
+
+A long-lived session's `context()` identifies its peer and defaults, but
+`encrypt(stanza, operationContext)` and `decrypt(stanza, operationContext)`
+merge a separate immutable context for **each** stanza. This is essential for
+overlapping asynchronous work: replies (`replyTo`), MUC sender identity, and
+forwarded carbons cannot mutate a shared session-wide context or leak into
+subsequent messages. Method and plugin implementations receive the merged
+context for that operation.
+
+OMEMO's actual Double Ratchet sessions remain in the libsignal storage by
+bare JID **and device ID** (separate for legacy and OMEMO 2). They survive
+the lifetime of any application-owned stanza `EncryptedSession`, which must
+neither replace nor reset those underlying ratchets.
 
 OMEMO does **not** claim `DataMessage` or `DataStream`: using the Double Ratchet to
 bulk-encrypt a file or media stream is the wrong layer. A file-encryption method (for

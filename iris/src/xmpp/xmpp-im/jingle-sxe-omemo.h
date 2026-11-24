@@ -21,40 +21,22 @@
 #define JINGLE_SXE_OMEMO_H
 
 #include <iris/iris_export.h>
-#include <iris/xmpp-im/jingle-sxe.h>
+#include <iris/xmpp-im/jingle-session.h>
 
-#include <QPointer>
-
-namespace XMPP {
-class OmemoEncryption;
-
-namespace Jingle { namespace SXE {
-    /**
-     * @brief SXE payload in messages protected with OMEMO 2: each <sxe/> travels in an SCE envelope.
-     *
-     * Used for sessions that prefer end-to-end encryption when the peer advertises OMEMO 2 and
-     * urn:xmpp:sxe:0#omemo (a Psi extension, docs/xsf-proposals/xep-0284-sxe-encryption.md).
-     * Registers itself with the SXE transport manager of @a manager until destroyed.
-     */
-    class IRIS_EXPORT SxeOmemo : public QObject, public PayloadProtector {
-        Q_OBJECT
+namespace XMPP::Jingle::SXE {
+    // Wire-format adapter only. Encryption state and lifetime belong to the Jingle session.
+    class IRIS_EXPORT SxeOmemo {
     public:
-        static QString feature(); // urn:xmpp:sxe:0#omemo
-
-        SxeOmemo(XMPP::Jingle::Manager *manager, OmemoEncryption *omemo, QObject *parent = nullptr);
-        ~SxeOmemo() override;
-
-        QString     method() const override;
-        bool        canProtect(const Jid &peer) const override;
-        QStringList discoFeatures() const override;
-        void        protect(const Jid &peer, const QDomElement &sxe, const Done &done) override;
-        void        unprotect(const Jid &from, const QDomElement &message, const Done &done) override;
-
-    private:
-        QPointer<XMPP::Jingle::Manager> manager_;
-        QPointer<OmemoEncryption>       omemo_;
+        using Done = std::function<void(const QDomElement &)>;
+        static QString feature();
+        static QString methodId();
+        static QString wireProfile();
+        static bool isSupported(XMPP::Jingle::Manager *manager);
+        static bool canProtect(Session *session);
+        static void protect(Session *session, const QDomElement &sxe, QObject *receiver, const Done &done);
+        static void unprotect(Session *session, const Jid &from, const QDomElement &message, QObject *receiver,
+                              const Done &done);
     };
-}}
 }
 
 #endif // JINGLE_SXE_OMEMO_H

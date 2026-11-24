@@ -29,6 +29,7 @@
 #include <QCryptographicHash>
 #include <QObject>
 #include <QStringList>
+#include <functional>
 
 class ByteStream;
 class QDomDocument;
@@ -103,8 +104,17 @@ public:
 
     void           send(const QDomElement &);
     void           send(const QString &);
+    // Iris owns protocol-scoped sessions. Applications own their conversation
+    // sessions and decrypt incoming stanzas through this callback.
+    enum class EncryptionSessionPurpose { Message, Groupchat, Carbon, Protocol };
+    using IncomingEncryptedStanzaHandler = std::function<EncryptionJob *(
+        const QDomElement &, const QString &methodId, const EncryptionContext &, EncryptionSessionPurpose)>;
+    void setIncomingEncryptedStanzaHandler(IncomingEncryptedStanzaHandler handler);
+    // An explicitly named method uses a one-operation session; protocol owners
+    // with established sessions pass them using the overload below.
     EncryptionJob *sendEncrypted(const QDomElement &, const QString &methodId, const EncryptionContext &);
-    EncryptionJob *sendEncrypted(const QDomElement &, EncryptedSession *session);
+    EncryptionJob *sendEncrypted(const QDomElement &, EncryptedSession *session,
+                                 const EncryptionContext &operation = {});
     EncryptionJob *replyEncrypted(const QDomElement &, const EncryptionMetadata &);
     void           clearSendQueue();
 
@@ -246,11 +256,9 @@ private slots:
     void handleSMAckResponse(int);
     void parseUnhandledStreamFeatures();
 
-public:
-    class GroupChat;
-
 private:
     void cleanup();
+    void cancelPendingDecryptionJobs();
     void distribute(const QDomElement &);
     bool distributeEncryptedCarbon(const QDomElement &);
     void distributeDecrypted(const QDomElement &, const EncryptionMetadata *metadata);

@@ -7,7 +7,7 @@
 #include "omemoelement.cpp"
 #undef main
 
-#include <iris/jingle-omemo-verification.h>
+#include <iris/jingle-dtls-omemo.h>
 #include <iris/jingle-session.h>
 #include <iris/jingle-sxe-omemo.h>
 #include <iris/xmpp-im/jingle-sxe.h>
@@ -78,7 +78,7 @@ QString dump(const QDomDocument &doc)
 }
 
 Run start(Endpoint &alice, Endpoint &bob, bool preferred, bool required, Wire &wire,
-          const std::function<void(QDomElement &)> &tamper = {})
+          const std::function<void(QDomElement &)> &tamper = {}, const QString &methodId = OmemoEncryption::methodId())
 {
     Run run;
     onStanza = [&wire, tamper](const Endpoint &, QDomElement &stanza) {
@@ -101,6 +101,11 @@ Run start(Endpoint &alice, Endpoint &bob, bool preferred, bool required, Wire &w
     auto connection = QObject::connect(bob.client.jingleManager(), &J::Manager::incomingSession, &bob.client,
                                        [&run](J::Session *session) { run.peerSession = session; });
     run.session     = alice.client.jingleManager()->newSession(bob.jid);
+    if (preferred) {
+        const bool available = run.session->setEncryptionMethod(methodId);
+        check(available == (methodId == OmemoEncryption::methodId()),
+              "The SXE Jingle session selected an unexpected encryption method");
+    }
     run.session->setEndToEndPreferred(preferred);
     run.session->setEndToEndRequired(required);
     run.local = qobject_cast<SXE::Application *>(run.session->newContent(SXE::NS_SVG_WHITEBOARD));
@@ -147,10 +152,6 @@ int main(int argc, char **argv)
         pep.clear();
         return 0;
     }
-    SXE::SxeOmemo            aliceSxe(alice.client.jingleManager(), alice.omemo);
-    SXE::SxeOmemo            bobSxe(bob.client.jingleManager(), bob.omemo);
-    J::OmemoDtlsVerification aliceVerification(alice.client.jingleManager(), alice.omemo);
-    J::OmemoDtlsVerification bobVerification(bob.client.jingleManager(), bob.omemo);
     const QStringList        omemo2 { OmemoEncryption::namespaceUri() };
     check(alice.client.jingleManager()->discoFeatures().contains(SXE::SxeOmemo::feature()),
           "the protected SXE payload is not advertised");
@@ -161,6 +162,9 @@ int main(int argc, char **argv)
     Wire wire;
     auto run = start(alice, bob, true, false, wire);
     check(synchronized(run), "the protected whiteboard did not synchronize");
+    check(run.session->encryptionSession() && run.peerSession->encryptionSession()
+              && run.peerSession->encryptionMethodId() == OmemoEncryption::methodId(),
+          "SXE did not use the Jingle encryption sessions on both peers");
     draw(alice, bob, run, QStringLiteral("r1"));
     check(dump(run.remote->document()->document()) == dump(run.local->document()->document()),
           "edits of the protected whiteboard were not exchanged");
@@ -215,6 +219,48 @@ int main(int argc, char **argv)
     run  = start(alice, bob, true, true, wire);
     check(!run.peerSession && wire.plain == 0 && (!run.session || run.session->state() == J::State::Finished),
           "a required protection started a whiteboard in clear");
+
+    // Selected non-OMEMO encryption must not be replaced with OMEMO or plaintext.
+    setPeerFeatures(alice.client, bob.jid, bob.client.jingleManager()->discoFeatures() + omemo2);
+    wire = {};
+    run  = start(alice, bob, true, true, wire, {}, QStringLiteral("unsupported-method"));
+    check(!run.peerSession && wire.plain == 0 && wire.encryption.isEmpty(),
+          "a selected alternative encryption method was silently replaced for SXE");
+
+    // A fresh peer forces the first protected edit to wait for the PEP device list and bundle.
+    Endpoint carol(QStringLiteral("carol"));
+    onStanza = nullptr;
+    check(wait(carol.omemo->setUp(), alice, carol)->success(), "Carol OMEMO setup failed");
+    setPeerFeatures(alice.client, carol.jid, carol.client.jingleManager()->discoFeatures() + omemo2);
+    auto *pending = alice.client.jingleManager()->newSession(carol.jid, QStringLiteral("sxe-unload"));
+    check(pending && pending->setEncryptionMethod(OmemoEncryption::methodId()), "Could not select OMEMO for pending SXE");
+    pending->setEndToEndRequired(true);
+    auto raw = pending->newOutgoingTransport(SXE::NS_TRANSPORT);
+    QPointer<SXE::Transport> transport(qobject_cast<SXE::Transport *>(raw.data()));
+    check(transport, "Could not create SXE message transport");
+    QDomDocument invalid;
+    parseInto(invalid, QStringLiteral("<transport xmlns='urn:xmpp:jingle:transports:sxe' "
+                                     "encryption='urn:test:unsupported'><host>carol@example.test/device</host></transport>"));
+    check(!transport->prepareUpdate(invalid.documentElement()), "Unsupported SXE wire profile was accepted");
+    transport->prepare();
+    check(transport->encryption() == OmemoEncryption::namespaceUri(), "SXE did not negotiate OMEMO 2");
+    QDomDocument edit;
+    parseInto(edit, QStringLiteral("<sxe xmlns='urn:xmpp:sxe:0' session='sxe-unload' id='1'><connect/></sxe>"));
+    transport->sendSxe(edit.documentElement());
+    transport->sendSxe(edit.documentElement());
+    check(pending->encryptionSession()->hasActiveOperations(), "SXE encryption did not wait for remote key material");
+
+    int payloadsAfterUnload = 0;
+    onStanza = [&payloadsAfterUnload](const Endpoint &, QDomElement &stanza) {
+        if (stanza.tagName() == QLatin1String("message")
+            && stanza.firstChildElement(QStringLiteral("sxe")).namespaceURI() == SxeNs)
+            ++payloadsAfterUnload;
+    };
+    alice.client.encryptionManager()->unregisterMethod(alice.omemo);
+    check(!transport || transport->state() == J::State::Finished, "Protected SXE transport survived method unregistration");
+    pump(alice, carol);
+    check(payloadsAfterUnload == 0, "Pending or queued SXE payload escaped after encryption method unregistration");
+    pending->terminate(J::Reason::Success);
 
     onStanza = nullptr;
     QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);

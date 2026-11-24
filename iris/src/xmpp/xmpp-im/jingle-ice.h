@@ -79,6 +79,9 @@ namespace Jingle { namespace ICE {
         friend class Pad;
         void releaseNetworkOwnership();
         bool iceCanSendMedia() const;
+        void processNextRemoteUpdate();
+        void prepareOutgoingFingerprint();
+        bool requiresVerifiedFingerprint() const;
 
         class Private;
         std::unique_ptr<Private> d;

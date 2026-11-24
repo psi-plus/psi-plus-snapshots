@@ -143,6 +143,8 @@ set(XMPP_IM_HEADERS
     xmpp-im/jingle-ibb.h
     xmpp-im/jingle-sxe-document.h
     xmpp-im/jingle-sxe.h
+    xmpp-im/jingle-jet.h
+    xmpp-im/jingle-jet-connection.h
     xmpp-im/jingle-file.h
     xmpp-im/jingle-pub.h
     xmpp-im/xmpp_file-sharing.h
@@ -178,6 +180,8 @@ target_sources(iris PRIVATE
     xmpp-core/xmpp_stanza.cpp
 
     xmpp-im/client.cpp
+    xmpp-im/mucmanager.h
+    xmpp-im/mucmanager.cpp
     xmpp-im/filetransfer.cpp
     xmpp-im/httpfileupload.cpp
     xmpp-im/types.cpp
@@ -223,6 +227,8 @@ target_sources(iris PRIVATE
     xmpp-im/jingle-nstransportslist.cpp
     xmpp-im/jingle-ft.cpp
     xmpp-im/jingle-jet.cpp
+    xmpp-im/jingle-jet-connection.cpp
+    xmpp-im/jingle-jet-cipher.cpp
     xmpp-im/jingle-jet_p.h
     xmpp-im/jingle-rtp-description.cpp
     xmpp-im/jingle-rtp-negotiation.cpp
@@ -268,8 +274,8 @@ if(IRIS_ENABLE_OMEMO)
     target_sources(iris PRIVATE
         xmpp-im/xmpp_omemo.h
         xmpp-im/xmpp_omemo.cpp
-        xmpp-im/jingle-omemo-verification.h
-        xmpp-im/jingle-omemo-verification.cpp
+        xmpp-im/jingle-dtls-omemo.h
+        xmpp-im/jingle-dtls-omemo.cpp
         xmpp-im/jingle-jet-omemo.h
         xmpp-im/jingle-jet-omemo.cpp
         xmpp-im/jingle-sxe-omemo.h
@@ -277,7 +283,7 @@ if(IRIS_ENABLE_OMEMO)
     )
     target_compile_definitions(iris PUBLIC IRIS_ENABLE_OMEMO=1)
     target_link_libraries(iris PRIVATE PkgConfig::OmemoC)
-    list(APPEND XMPP_IM_HEADERS xmpp-im/xmpp_omemo.h xmpp-im/jingle-omemo-verification.h
+    list(APPEND XMPP_IM_HEADERS xmpp-im/xmpp_omemo.h xmpp-im/jingle-dtls-omemo.h
          xmpp-im/jingle-jet-omemo.h xmpp-im/jingle-sxe-omemo.h)
 endif()
 

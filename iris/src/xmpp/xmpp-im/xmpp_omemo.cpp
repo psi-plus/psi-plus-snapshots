@@ -2235,18 +2235,41 @@ public:
             callback(true, {});
             return;
         }
-        const auto owner = Jid(owners.at(index)).bare();
-        if (fetchedDeviceLists.contains(fetchedListKey(owner, protocol))) {
-            ensureDeviceLists(owners, protocol, index + 1, callback);
-            return;
-        }
-        fetchDeviceList(owner, protocol, [this, owners, protocol, index, callback](bool ok, const QString &error) {
-            if (!ok) {
-                callback(false, error);
+
+        // For MUC a recipient list can contain many offline members. Network
+        // latency must not accumulate one RTT at a time, but avoid flooding
+        // PEP services with an unlimited number of simultaneous requests.
+        constexpr int MaxConcurrentDeviceLists = 4;
+        const int     end = qMin(index + MaxConcurrentDeviceLists, owners.size());
+        struct Batch {
+            int     pending = 0;
+            QString firstError;
+        };
+        auto batch = std::make_shared<Batch>();
+        batch->pending = end - index;
+
+        const auto completed = [this, batch, owners, protocol, end, callback](bool ok, const QString &error) {
+            if (!ok && batch->firstError.isEmpty())
+                batch->firstError = error.isEmpty() ? QStringLiteral("OMEMO device-list request failed") : error;
+            if (--batch->pending != 0)
+                return;
+            if (!batch->firstError.isEmpty()) {
+                callback(false, batch->firstError);
                 return;
             }
-            ensureDeviceLists(owners, protocol, index + 1, callback);
-        });
+            ensureDeviceLists(owners, protocol, end, callback);
+        };
+
+        for (int i = index; i < end; ++i) {
+            const auto owner = Jid(owners.at(i)).bare();
+            if (fetchedDeviceLists.contains(fetchedListKey(owner, protocol))) {
+                completed(true, {});
+            } else {
+                fetchDeviceList(owner, protocol, [completed](bool ok, const QString &error) {
+                    completed(ok, error);
+                });
+            }
+        }
     }
 
     void ensureSessions(const QList<QPair<QString, uint32_t>> &targets, OmemoProtocol protocol, int index,
@@ -2476,9 +2499,8 @@ public:
     {
     }
 
-    EncryptionJob *encrypt(const QDomElement &xml) override
+    EncryptionJob *doEncrypt(const QDomElement &xml, const EncryptionContext &context) override
     {
-        const auto &context = this->context();
         auto        job     = new EncryptionJob(this);
         auto        d       = method_->d.get();
         if (!d->ready) {
@@ -2500,16 +2522,16 @@ public:
         const bool legacyFallback = *protocolValue == OmemoProtocol::Omemo2 && !context.replyTo
             && !context.options.contains(QLatin1String(OmemoProtocolOption))
             && d->supportedProtocols.testFlag(OmemoProtocol::Legacy) && localName(xml) == QLatin1String("message");
-        encryptWith(xml, *protocolValue, legacyFallback, job);
+        encryptWith(xml, *protocolValue, legacyFallback, context, job);
         return job;
     }
 
     // With @a legacyFallback an OMEMO 2 message is encrypted with legacy OMEMO instead when that reaches more of
     // the recipients' devices: a server keeping one item per PEP node holds only the OMEMO 2 bundle published
     // last by an account's devices, while legacy OMEMO keeps a node per device.
-    void encryptWith(const QDomElement &xml, OmemoProtocol protocol, bool legacyFallback, EncryptionJob *job)
+    void encryptWith(const QDomElement &xml, OmemoProtocol protocol, bool legacyFallback,
+                     const EncryptionContext &context, EncryptionJob *job)
     {
-        const auto &context = this->context();
         auto        d       = method_->d.get();
         if (protocol == OmemoProtocol::Legacy && localName(xml) != QLatin1String("message")) {
             job->fail(EncryptionJob::Error::Unsupported, QStringLiteral("Legacy OMEMO supports message stanzas only"));
@@ -2580,7 +2602,7 @@ public:
                 d->ensureSessions(
                     targets, protocol, 0, true,
                     [this, guardedJob, preparedOuter, plaintext, legacyHasPayload, owners, protocol, legacyFallback,
-                     targets, inputDocument,
+                     targets, context, inputDocument,
                      stanza](bool sessionsOk, EncryptionJob::Error sessionError, const QString &sessionErrorString,
                              QList<QPair<QString, uint32_t>> readyTargets, const QStringList &skippedTargets) {
                         if (!guardedJob)
@@ -2608,7 +2630,7 @@ public:
                                 qInfo("OMEMO: device(s) without an OMEMO 2 bundle are reachable with legacy OMEMO; "
                                       "encrypting with legacy OMEMO");
                                 Q_UNUSED(inputDocument) // keeps the stanza's document alive
-                                encryptWith(stanza, OmemoProtocol::Legacy, false, guardedJob);
+                                encryptWith(stanza, OmemoProtocol::Legacy, false, context, guardedJob);
                                 return;
                             }
                         }
@@ -2772,7 +2794,7 @@ public:
             });
     }
 
-    EncryptionJob *decrypt(const QDomElement &xml) override
+    EncryptionJob *doDecrypt(const QDomElement &xml, const EncryptionContext &context) override
     {
         auto job = new EncryptionJob(this);
         auto d   = method_->d.get();
@@ -2800,10 +2822,22 @@ public:
             job->fail(EncryptionJob::Error::ProtocolError, QStringLiteral("Malformed OMEMO encrypted stanza"));
             return job;
         }
-        const Jid sender(xml.attribute(QStringLiteral("from")));
-        if (!sender.isValid()) {
-            job->fail(EncryptionJob::Error::ProtocolError, QStringLiteral("OMEMO stanza has no valid sender"));
+        const Jid  outerSender(xml.attribute(QStringLiteral("from")));
+        const bool isMuc = xml.attribute(QStringLiteral("type")) == QLatin1String("groupchat");
+        if (!outerSender.isValid()) {
+            job->fail(EncryptionJob::Error::AuthenticationFailed,
+                      QStringLiteral("OMEMO stanza has no valid sender"));
             return job;
+        }
+        Jid sender = outerSender;
+        if (isMuc) {
+            sender = Jid(context.options.value(QStringLiteral("mucRealSender")).toString());
+            if (outerSender.resource().isEmpty() || !sender.isValid() || sender.node().isEmpty()
+                || !sender.resource().isEmpty()) {
+                job->fail(EncryptionJob::Error::AuthenticationFailed,
+                          QStringLiteral("OMEMO groupchat sender has no verified real bare JID"));
+                return job;
+            }
         }
 
         QDomElement ourKey;
@@ -2969,18 +3003,40 @@ public:
 
             StanzaContentEncryption::Profile profile;
             profile.affixes = StanzaContentEncryption::RandomPadding | StanzaContentEncryption::From;
-            if (!xml.attribute(QStringLiteral("to")).isEmpty())
+            // OMEMO §5.5.1 requires <to/> for MUC, even when the MUC
+            // service rewrites the stanza's outer 'to' to our full JID.
+            if (isMuc || !xml.attribute(QStringLiteral("to")).isEmpty())
                 profile.affixes |= StanzaContentEncryption::To;
             profile.minimumEnvelopeSize = d->minimumEnvelopeSize;
+
+            // The MUC server rewrites the sender to room/nick. For SCE
+            // verification we must compare the authenticated real sender
+            // and the original room address. Keep the actual outer stanza
+            // for delivery after verifying BOTH affixes.
+            QDomDocument checkedDocument;
+            QDomElement  checkedOuter = xml;
+            if (isMuc) {
+                checkedOuter = checkedDocument.importNode(xml, true).toElement();
+                checkedDocument.appendChild(checkedOuter);
+                checkedOuter.setAttribute(QStringLiteral("from"), sender.bare());
+                checkedOuter.setAttribute(QStringLiteral("to"), outerSender.bare());
+            }
             QString sceError;
-            auto    restored
-                = StanzaContentEncryption::restore(xml, envelopeDocument.documentElement(), profile, &sceError);
+            auto    restored = StanzaContentEncryption::restore(checkedOuter, envelopeDocument.documentElement(),
+                                                                profile, &sceError);
             if (!restored) {
                 job->fail(EncryptionJob::Error::AuthenticationFailed, sceError);
                 return job;
             }
             restoredDocument = std::move(*restored);
             restoredStanza   = restoredDocument.documentElement();
+            if (isMuc) {
+                restoredStanza.setAttribute(QStringLiteral("from"), outerSender.full());
+                if (xml.hasAttribute(QStringLiteral("to")))
+                    restoredStanza.setAttribute(QStringLiteral("to"), xml.attribute(QStringLiteral("to")));
+                else
+                    restoredStanza.removeAttribute(QStringLiteral("to"));
+            }
         }
 
         auto       device          = d->data.devices.value(sender.bare()).value(senderDevice);
@@ -3026,7 +3082,7 @@ public:
 
         if (protocol == OmemoProtocol::Omemo2) {
             const bool heartbeatRequired = firstForRatchet && messageCounter >= 53;
-            if (!context().isArchiveReplay() && (keyExchange || heartbeatRequired)) {
+            if (!context.isArchiveReplay() && (keyExchange || heartbeatRequired)) {
                 QTimer::singleShot(0, method_, [method = method_, sender, senderDevice]() {
                     auto ack = method->sendEmptyMessage(sender.bare(), senderDevice);
                     if (!ack->success() && ack->isFinished())
@@ -3142,6 +3198,23 @@ bool OmemoEncryption::canDecrypt(const QDomElement &stanza) const
 {
     const auto encrypted = findOmemoElement(stanza);
     return encrypted && d->supportedProtocols.testFlag(encrypted->protocol);
+}
+
+EncryptionMethod::Availability OmemoEncryption::availability(const Jid &peer) const
+{
+    if (supportedProtocols() == OmemoProtocols())
+        return Availability::Unavailable;
+    if (!peer.resource().isEmpty() && preferredProtocolFor(peer))
+        return Availability::Available;
+
+    // Missing caps information does not mean the recipient lacks OMEMO.
+    // A cached active PEP device is sufficient to confirm availability.
+    const auto supported = supportedProtocols();
+    for (const auto &device : devices(peer)) {
+        if (device.active && (device.protocols & supported) != OmemoProtocols())
+            return Availability::Available;
+    }
+    return Availability::Unknown;
 }
 
 OmemoProtocols OmemoEncryption::supportedProtocols() const { return d->supportedProtocols; }
@@ -3956,9 +4029,13 @@ EncryptionJob *OmemoEncryption::encryptElement(const Jid &recipient, OmemoProtoc
         wrapper.appendChild(wrapperDocument.importNode(content, true));
     }
 
-    auto session = new OmemoEncryptedSession(this, context);
+    auto *session = startSession(XmppStanza, context);
+    if (!session) {
+        job->fail(EncryptionJob::Error::NoSession, QStringLiteral("Could not create OMEMO element session"));
+        return job;
+    }
     session->setParent(job);
-    auto inner  = session->encrypt(wrapper);
+    auto *inner  = session->encrypt(wrapper);
     auto finish = [job, inner, protocol]() {
         const auto encrypted
             = inner->success() ? inner->stanza().firstChildElement(QStringLiteral("encrypted")) : QDomElement();
@@ -3991,9 +4068,13 @@ EncryptionJob *OmemoEncryption::decryptElement(const Jid &sender, const QDomElem
     wrapper.appendChild(wrapperDocument.importNode(encrypted, true));
     wrapperDocument.appendChild(wrapper);
 
-    auto session = new OmemoEncryptedSession(this, {});
+    auto *session = startSession(XmppStanza, {});
+    if (!session) {
+        job->fail(EncryptionJob::Error::NoSession, QStringLiteral("Could not create OMEMO element session"));
+        return job;
+    }
     session->setParent(job);
-    auto inner  = session->decrypt(wrapper);
+    auto *inner  = session->decrypt(wrapper);
     auto finish = [job, inner]() {
         if (!inner->success()) {
             job->fail(inner->error(), inner->errorString(), inner->metadata());

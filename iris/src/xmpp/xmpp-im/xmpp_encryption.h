@@ -32,7 +32,6 @@
 #include <QString>
 #include <QVariantMap>
 
-#include <functional>
 #include <map>
 #include <memory>
 #include <optional>
@@ -176,15 +175,43 @@ public:
     QString                  methodId() const;
     const EncryptionContext &context() const;
     bool                     isClosing() const;
+    bool                     hasActiveOperations() const;
     void                     close();
 
-    virtual EncryptionJob *encrypt(const QDomElement &xml);
-    virtual EncryptionJob *decrypt(const QDomElement &xml);
-    virtual EncryptionJob *encrypt(const QByteArray &data);
-    virtual EncryptionJob *decrypt(const QByteArray &data);
+    // Validate session state, track jobs, and dispatch to protocol implementations.
+    // Per-operation context is merged with the long-lived peer context.
+    // Concurrent jobs never modify the session's base context.
+    EncryptionJob *encrypt(const QDomElement &xml, const EncryptionContext &operation = {});
+    EncryptionJob *decrypt(const QDomElement &xml, const EncryptionContext &operation = {});
+    EncryptionJob *encrypt(const QByteArray &data);
+    EncryptionJob *decrypt(const QByteArray &data);
+
+    /**
+     * Incremental encryption/decryption (DataStream capability). A session owns exactly one
+     * stream: submit the next chunk only after the preceding job succeeds. The final chunk
+     * must be submitted with final=true, even for an empty stream. A failed or finalized
+     * stream cannot be reused; start a new session instead.
+     *
+     * Unlike DataMessage, a successful non-final decryption does not authenticate the
+     * whole stream. Consumers MUST hold decrypted bytes as untrusted until the final
+     * job succeeds, and must discard them on failure (for example, an invalid GCM tag).
+     * Implementations can emit the authentication tag as part of the final encrypted
+     * result, or validate it in the final decrypted result.
+     */
+    EncryptionJob *encryptChunk(const QByteArray &chunk, bool final = false);
+    EncryptionJob *decryptChunk(const QByteArray &chunk, bool final = false);
+
+protected:
+    virtual EncryptionJob *doEncrypt(const QDomElement &xml, const EncryptionContext &context);
+    virtual EncryptionJob *doDecrypt(const QDomElement &xml, const EncryptionContext &context);
+    virtual EncryptionJob *doEncrypt(const QByteArray &data);
+    virtual EncryptionJob *doDecrypt(const QByteArray &data);
+    virtual EncryptionJob *doEncryptChunk(const QByteArray &chunk, bool final);
+    virtual EncryptionJob *doDecryptChunk(const QByteArray &chunk, bool final);
 
 private:
-    void track(EncryptionJob *job);
+    EncryptionJob *runStream(const QByteArray &chunk, bool encrypting, bool final);
+    EncryptionJob *track(EncryptionJob *job);
     void operationFinished(EncryptionJob *job);
 
     class Private;
@@ -196,6 +223,7 @@ private:
 class EncryptionMethod : public QObject {
     Q_OBJECT
 public:
+    enum class Availability { Unknown, Available, Unavailable };
     enum Capability {
         XmppStanza  = 0x1, /**< XML stanza/SCE style encryption. */
         DataMessage = 0x2, /**< An independent byte message, processed at once. */
@@ -212,6 +240,8 @@ public:
     virtual EncryptedSession *startSession(Capabilities caps, const EncryptionContext &context) = 0;
     virtual Features          features() const                                                  = 0;
     virtual bool              canDecrypt(const QDomElement &stanza) const                       = 0;
+    // Concrete methods decide peer support; absent discovery must not be mistaken for rejection.
+    virtual Availability availability(const Jid &peer) const;
 
     /**
      * Resolve and validate the peer data needed to recover a failed incoming
@@ -230,7 +260,7 @@ public:
 };
 Q_DECLARE_OPERATORS_FOR_FLAGS(EncryptionMethod::Capabilities)
 
-/** Registry/router for dynamically installable end-to-end encryption methods. */
+/** Registry and session factory for dynamically installable end-to-end encryption methods. */
 class EncryptionManager : public QObject {
     Q_OBJECT
 public:
@@ -246,36 +276,19 @@ public:
 
     EncryptionMethod *method(const QString &id) const;
     EncryptionMethod *methodForStanza(const QDomElement &stanza) const;
-    MethodsMap        methods(EncryptionMethod::Capabilities caps = EncryptionMethod::Capabilities(0xff)) const;
+    EncryptionMethod::Availability availability(const QString &methodId, const Jid &peer) const;
+    MethodsMap                     methods(EncryptionMethod::Capabilities caps = {}) const;
     Features          features() const;
 
-    EncryptedSession *startSession(const QString &methodId, EncryptionMethod::Capability capability,
+    /** A session may combine stanza signaling and incremental data, e.g. for Jingle. */
+    EncryptedSession *startSession(const QString &methodId, EncryptionMethod::Capabilities capabilities,
                                    const EncryptionContext &context = {});
-
-    EncryptionJob *encrypt(const QString &methodId, const QDomElement &stanza, const EncryptionContext &context = {});
-    EncryptionJob *decrypt(const QDomElement &stanza, const EncryptionContext &context = {});
-    EncryptionJob *encrypt(const QString &methodId, const QByteArray &data, const EncryptionContext &context = {});
-    EncryptionJob *decrypt(const QString &methodId, const QByteArray &data, const EncryptionContext &context = {});
-
-    EncryptionJob *prepareDecryptionRecovery(const QString &methodId, const EncryptionMetadata &metadata);
-    EncryptionJob *recoverDecryption(const QString &methodId, const EncryptionMetadata &metadata);
-
-    EncryptionJob *encrypt(EncryptedSession *session, const QDomElement &stanza);
-    EncryptionJob *decrypt(EncryptedSession *session, const QDomElement &stanza);
-    EncryptionJob *encrypt(EncryptedSession *session, const QByteArray &data);
-    EncryptionJob *decrypt(EncryptedSession *session, const QByteArray &data);
 
 signals:
     void methodRegistered(const QString &id);
     void methodUnregistered(const QString &id);
 
 private:
-    EncryptionJob *unsupported(const QString &message) const;
-    EncryptionJob *run(EncryptedSession *session, const std::function<EncryptionJob *(EncryptedSession *)> &operation);
-    EncryptionJob *runTransient(EncryptionMethod *method, EncryptionMethod::Capability capability,
-                                const EncryptionContext                                  &context,
-                                const std::function<EncryptionJob *(EncryptedSession *)> &operation);
-
     class Private;
     std::unique_ptr<Private> d;
 };

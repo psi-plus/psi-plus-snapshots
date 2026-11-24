@@ -18,11 +18,12 @@
  */
 
 #include "jingle-ft.h"
-#include "jingle-jet_p.h"
+#include "jingle-jet.h"
 #include "jingle-nstransportslist.h"
 #include "jingle-session.h"
 
 #include "xmpp_client.h"
+#include "xmpp_encryption.h"
 #include "xmpp_hash.h"
 #include "xmpp_thumbs.h"
 
@@ -175,27 +176,13 @@ namespace XMPP { namespace Jingle { namespace FileTransfer {
         QList<Hash>                        incomingChecksum;
         QTimer                            *finalizeTimer = nullptr;
         FileHasher                        *hasher        = nullptr;
-        // JET: the transport secret, and the cipher of the running transfer.
-        QByteArray                         jetKey;
-        QByteArray                         jetIv;
-        std::unique_ptr<JET::StreamCipher> jet;
-        bool                               jetTagWritten = false;
+        QPointer<JET::Protection> protection;
 
         bool writeToConnection(const QByteArray &data)
         {
             if (connection->features() & TransportFeature::MessageOriented)
                 return connection->writeDatagram(data);
             return connection->write(data) != -1;
-        }
-
-        // Sender: appends the tag after the last encrypted block.
-        bool writeJetTag()
-        {
-            if (!jet || jetTagWritten)
-                return true;
-            jetTagWritten  = true;
-            const auto tag = jet->finish();
-            return tag.size() == JET::StreamCipher::TagSize && writeToConnection(tag);
         }
 
         void cancelFinalize()
@@ -395,13 +382,6 @@ namespace XMPP { namespace Jingle { namespace FileTransfer {
 
             if (bytesLeft && *bytesLeft == 0) {
                 QPointer<Application> guard(q);
-                if (!writeJetTag()) {
-                    if (guard)
-                        handleStreamFail(QStringLiteral("could not finish the encrypted stream"));
-                    return;
-                }
-                if (!guard)
-                    return;
                 beginPayloadFinishing();
                 if (!guard)
                     return;
@@ -438,13 +418,6 @@ namespace XMPP { namespace Jingle { namespace FileTransfer {
             data.resize(readSz);
             if (readSz == 0) {
                 if (!bytesLeft) {
-                    if (!writeJetTag()) {
-                        if (guard)
-                            handleStreamFail(QStringLiteral("could not finish the encrypted stream"));
-                        return;
-                    }
-                    if (!guard)
-                        return;
                     lastReason = Reason(Reason::Condition::Success);
                     if (hasher) {
                         auto hash = hasher->result();
@@ -463,7 +436,7 @@ namespace XMPP { namespace Jingle { namespace FileTransfer {
                 hasher->addData(data);
             }
 
-            const bool written = writeToConnection(jet ? jet->process(data) : data);
+            const bool written = writeToConnection(data);
             if (!guard)
                 return;
             if (!written) {
@@ -509,10 +482,6 @@ namespace XMPP { namespace Jingle { namespace FileTransfer {
                     handleStreamFail();
                     return;
                 }
-                // bytesLeft counts bytes on the wire: with JET the plain data and the tag.
-                const auto wireSize = data.size();
-                if (jet)
-                    data = jet->process(data);
                 if (hasher) {
                     hasher->addData(data);
                 }
@@ -528,7 +497,7 @@ namespace XMPP { namespace Jingle { namespace FileTransfer {
                 // The returned payload becomes application-visible before any
                 // close observed during read() is interpreted.
                 if (bytesLeft)
-                    *bytesLeft -= wireSize;
+                    *bytesLeft -= data.size();
 
                 const bool deferredClose = closeObservedWhileRead;
                 closeObservedWhileRead   = false;
@@ -544,11 +513,9 @@ namespace XMPP { namespace Jingle { namespace FileTransfer {
             }
             if (bytesLeft && *bytesLeft == 0) {
                 QPointer<Application> guard(q);
-                if (jet && !jet->verify()) {
-                    // The data written so far is not authentic: the consumer discards it on failure.
-                    lastReason = Reason(Reason::Condition::SecurityError,
-                                        QStringLiteral("the encrypted file failed authentication"));
-                    q->remove(lastReason.condition(), lastReason.text());
+                if (protection && !protection->authenticated()) {
+                    // In particular, an empty file has no plaintext bytes
+                    // to read while its final authentication tag is in flight.
                     return;
                 }
                 beginPayloadFinishing();
@@ -598,17 +565,18 @@ namespace XMPP { namespace Jingle { namespace FileTransfer {
                 bytesLeft = acceptFile.size();
             }
 
-            if (!jetKey.isEmpty()) {
-                // JET covers the whole file in one stream: no ranges, no streaming hooks, a known size.
-                jet = amISender() ? JET::StreamCipher::encryptor(jetKey, jetIv)
-                                  : JET::StreamCipher::decryptor(jetKey, jetIv);
-                if (!jet || acceptFile.range().isValid() || streamingMode || !bytesLeft) {
-                    jet.reset();
+            if (protection && protection->encrypted()) {
+                // The connection wrapper owns the cipher and authentication tag.
+                // FileTransfer deals exclusively in plaintext bytes.
+                if (acceptFile.range().isValid() || streamingMode || !bytesLeft) {
                     handleStreamFail(QStringLiteral("this transfer cannot be end-to-end encrypted"));
                     return;
                 }
-                if (amIReceiver())
-                    *bytesLeft += JET::StreamCipher::TagSize;
+                connection = protection->wrap(std::move(newConnection), amISender(), *bytesLeft);
+                if (!connection) {
+                    handleStreamFail(QStringLiteral("could not initialize the encrypted connection"));
+                    return;
+                }
             }
 
             if (streamingMode) {
@@ -678,8 +646,6 @@ namespace XMPP { namespace Jingle { namespace FileTransfer {
                 return;
             if (acceptFile.range().isValid()) {
                 emit q->deviceRequested(acceptFile.range().offset, bytesLeft);
-            } else if (jet && amIReceiver()) {
-                emit q->deviceRequested(0, *bytesLeft - JET::StreamCipher::TagSize);
             } else {
                 emit q->deviceRequested(0, bytesLeft);
             }
@@ -688,6 +654,14 @@ namespace XMPP { namespace Jingle { namespace FileTransfer {
         void tryFinalizeIncoming()
         {
             const bool moreBytesExpected = bytesLeft && *bytesLeft > 0;
+            if (protection && protection->encrypted() && !protection->authenticated()) {
+                // A checksum IQ may arrive before the transport is connected.
+                // Wait for its authentication tag instead of treating this as EOF.
+                if (!connection || connection->isOpen())
+                    return;
+                handleStreamFail(QStringLiteral("JET stream ended without authentication"));
+                return;
+            }
             if (q->_state == State::Finished || receiptReady || outgoingReceived || q->_terminationReason.isValid())
                 return;
             if (bytesLeft && !moreBytesExpected && q->_state < State::Finishing) {
@@ -770,6 +744,11 @@ namespace XMPP { namespace Jingle { namespace FileTransfer {
         _contentName = contentName;
         _creator     = creator;
         _senders     = senders;
+        d->protection = pad->session()->manager()->jet()->pad(pad->session())->createProtection(this, contentName);
+        connect(d->protection, &JET::Protection::failed, this, [this](const QString &error) {
+            if (_state < State::Finishing)
+                remove(Reason::SecurityError, error);
+        });
         _transportSelector.reset(
             new NSTransportsList(pad->session(), static_cast<Manager *>(pad->manager())->availableTransports()));
     }
@@ -810,6 +789,11 @@ namespace XMPP { namespace Jingle { namespace FileTransfer {
         if (ret == Application::Ok)
             d->file = f;
         return ret;
+    }
+
+    bool Application::setRemoteContentExtensions(const QDomElement &content)
+    {
+        return d->protection->setIncomingContent(content);
     }
 
     Application::SetDescError Application::setRemoteAnswer(const QDomElement &description)
@@ -998,22 +982,37 @@ namespace XMPP { namespace Jingle { namespace FileTransfer {
                 return OutgoingUpdate { QList<QDomElement>() << el, [this](bool) { d->expectReceived(); } };
             }
         }
-        if (_update.action == Action::ContentAdd && _creator == _pad->session()->role()) {
-            // we are doing outgoing file transfer request. so need thumbnail
+        const bool outgoingOffer = _update.action == Action::ContentAdd && _creator == _pad->session()->role();
+        auto       result        = XMPP::Jingle::Application::takeOutgoingUpdate();
+        if (outgoingOffer && !std::get<0>(result).isEmpty()) {
+            auto security = d->protection->outgoingSecurity(doc);
+            if (!security.isNull())
+                std::get<0>(result).first().appendChild(security);
         }
-
-        return XMPP::Jingle::Application::takeOutgoingUpdate();
+        return result;
     }
 
     void Application::prepare()
     {
-        if (!_transport) {
+        if (_state >= State::Finishing)
+            return;
+        if (!_transport)
             selectNextTransport();
-        }
-        if (_transport) {
-            d->setState(State::ApprovedToSend);
-            prepareTransport();
-        }
+        if (!_transport)
+            return;
+
+        QPointer<Application> guard(this);
+        d->protection->prepare(creator() == pad()->session()->role(), [guard](const QString &error) {
+            if (!guard || guard->_state >= State::Finishing)
+                return;
+            if (!error.isEmpty()) {
+                guard->remove(Reason::SecurityError, error);
+                return;
+            }
+            guard->d->setState(State::ApprovedToSend);
+            if (guard)
+                guard->prepareTransport();
+        });
     }
 
     void Application::start()
@@ -1078,15 +1077,10 @@ namespace XMPP { namespace Jingle { namespace FileTransfer {
             && (_senders == Origin::Initiator || _senders == Origin::Responder);
     }
 
-    void Application::setTransportSecret(const QByteArray &key, const QByteArray &iv)
+    bool Application::isTransportEncrypted() const
     {
-        if (_state >= State::Active)
-            return;
-        d->jetKey = key;
-        d->jetIv  = iv;
+        return d->protection->encrypted();
     }
-
-    bool Application::isTransportEncrypted() const { return !d->jetKey.isEmpty(); }
 
     void Application::setDevice(QIODevice *dev, bool closeOnFinish)
     {

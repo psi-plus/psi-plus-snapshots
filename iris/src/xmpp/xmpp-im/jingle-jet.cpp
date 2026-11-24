@@ -1,132 +1,357 @@
 /*
- * jingle-jet.cpp - stream cipher of Jingle Encrypted Transports (XEP-0391)
- * Copyright (C) 2026  Sergey Ilinykh
- *
- * This library is free software; you can redistribute it and/or
- * modify it under the terms of the GNU Lesser General Public
- * License as published by the Free Software Foundation; either
- * version 2.1 of the License, or (at your option) any later version.
- *
- * This library is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- * Lesser General Public License for more details.
- *
- * You should have received a copy of the GNU Lesser General Public License
- * along with this library.  If not, see <https://www.gnu.org/licenses/>.
- *
+ * jingle-jet.cpp - JET manager, per-session pad and per-content keys
+ * SPDX-License-Identifier: LGPL-2.1-or-later
  */
 
-#include "jingle-jet_p.h"
+#include "jingle-jet.h"
 
-#include <QtCrypto>
+#include "jingle-jet-connection.h"
+#include "jingle-jet_p.h"
+#include "xmpp_encryption.h"
+
+#include <QPointer>
+#include <utility>
 
 namespace XMPP { namespace Jingle { namespace JET {
     namespace {
-        QString algorithm(int keySize) { return keySize == 32 ? QStringLiteral("aes256") : QStringLiteral("aes128"); }
+        const QString JetNs(QStringLiteral("urn:xmpp:jingle:jet:0"));
 
-        QCA::Cipher gcm(const QByteArray &key, const QByteArray &iv)
+        bool validSecret(const ProtectedSecret &secret)
         {
-            // QCA takes the requested tag size from the AuthTag given to an encoder.
-            return QCA::Cipher(algorithm(int(key.size())), QCA::Cipher::GCM, QCA::Cipher::NoPadding, QCA::Encode,
-                               QCA::SymmetricKey(key), QCA::InitializationVector(iv),
-                               QCA::AuthTag(QByteArray(StreamCipher::TagSize, '\0')));
+            const auto size = keySize(secret.cipher);
+            return size && secret.key.size() == *size && secret.iv.size() == 12;
         }
 
-        class Encryptor final : public StreamCipher {
-        public:
-            Encryptor(const QByteArray &key, const QByteArray &iv) : cipher(gcm(key, iv)) { }
-            QByteArray process(const QByteArray &data) override { return cipher.update(data).toByteArray(); }
-            QByteArray finish() override
-            {
-                auto rest = cipher.final().toByteArray(); // empty for a stream mode
-                return cipher.ok() ? rest + cipher.tag().toByteArray() : QByteArray();
-            }
-            bool verify() override { return false; }
+        bool trusted(int trustLevel)
+        {
+            const auto trust = EncryptionTrustLevel(trustLevel);
+            return trust == EncryptionTrustLevel::AutomaticallyTrusted
+                || trust == EncryptionTrustLevel::ManuallyTrusted || trust == EncryptionTrustLevel::Authenticated;
+        }
+    }
 
-        private:
-            QCA::Cipher cipher;
+    class Manager::Private {
+    public:
+        QList<KeyTransport *> transports;
+        QHash<Session *, QPointer<Pad>> pads;
+
+        KeyTransport *forMethod(const QString &methodId) const
+        {
+            for (auto *transport : transports)
+                if (transport->methodId() == methodId)
+                    return transport;
+            return nullptr;
+        }
+
+        KeyTransport *forProfile(const QString &wireProfile) const
+        {
+            for (auto *transport : transports)
+                if (transport->accepts(wireProfile))
+                    return transport;
+            return nullptr;
+        }
+    };
+
+    QString Manager::ns() { return JetNs; }
+
+    Manager::Manager(XMPP::Jingle::Manager *jingle) : QObject(jingle), d(std::make_unique<Private>())
+    {
+        Q_ASSERT(jingle);
+    }
+
+    Manager::~Manager() = default;
+
+    bool Manager::registerKeyTransport(KeyTransport *transport)
+    {
+        if (!transport || transport->methodId().isEmpty())
+            return false;
+        if (auto *existing = d->forMethod(transport->methodId()))
+            return existing == transport;
+        d->transports.append(transport);
+        return true;
+    }
+
+    void Manager::unregisterKeyTransport(KeyTransport *transport)
+    {
+        if (!transport || !d->transports.removeAll(transport))
+            return;
+        emit keyTransportRemoved(transport->methodId());
+    }
+
+    QStringList Manager::discoFeatures() const
+    {
+        QStringList result;
+        for (auto *transport : std::as_const(d->transports)) {
+            const auto features = transport->discoFeatures();
+            if (features.isEmpty())
+                continue;
+            if (result.isEmpty())
+                result.append(JetNs);
+            result.append(features);
+        }
+        result.removeDuplicates();
+        return result;
+    }
+
+    Pad *Manager::pad(Session *session)
+    {
+        Q_ASSERT(session);
+        Q_ASSERT(session->manager()->jet() == this);
+        if (auto *existing = d->pads.value(session).data())
+            return existing;
+        auto *created = new Pad(this, session);
+        d->pads.insert(session, created);
+        connect(session, &QObject::destroyed, this, [this, session]() { d->pads.remove(session); });
+        return created;
+    }
+
+    Pad::Pad(Manager *manager, Session *session) : QObject(session), manager_(manager), session_(session)
+    {
+        Q_ASSERT(manager_);
+        Q_ASSERT(session_);
+    }
+
+    Pad::~Pad() = default;
+
+    Protection *Pad::createProtection(QObject *owner, const QString &contentName)
+    {
+        Q_ASSERT(owner);
+        Q_ASSERT(!contentName.isEmpty());
+        return new Protection(this, owner, contentName);
+    }
+
+    void Pad::prepareOutgoing(const Done &done)
+    {
+        if (!manager_ || !session_) {
+            done({}, QStringLiteral("JET session is no longer available"));
+            return;
+        }
+        KeyTransport *transport = nullptr;
+        if (!session_->encryptionMethodId().isEmpty())
+            transport = manager_->d->forMethod(session_->encryptionMethodId());
+        else if (manager_->d->transports.size() == 1)
+            transport = manager_->d->transports.first();
+
+        if (!transport || !session_->allowsEncryptionMethod(transport->methodId())
+            || !transport->canEncrypt(session_->peer())) {
+            done({}, QStringLiteral("No compatible JET key transport is available"));
+            return;
+        }
+
+        const QString methodId = transport->methodId();
+        QPointer<Pad> guard(this);
+        transport->encryptSecret(session_->peer(), [guard, methodId, done](const std::optional<ProtectedSecret> &secret,
+                                                                          const QString &error) {
+            if (!guard || !guard->manager_)
+                return;
+            auto *current = guard->manager_->d->forMethod(methodId);
+            if (!current || !secret || !validSecret(*secret) || secret->type.isEmpty() || secret->envelope.isNull()
+                || !current->accepts(secret->type)) {
+                done({}, error.isEmpty() ? QStringLiteral("Invalid outgoing JET key exchange") : error);
+            } else {
+                done(secret, {});
+            }
+        });
+    }
+
+    void Pad::prepareIncoming(const QDomElement &security, const QString &contentName, const Done &done)
+    {
+        if (!manager_ || !session_ || security.namespaceURI() != JetNs
+            || security.attribute(QStringLiteral("name")) != contentName) {
+            done({}, QStringLiteral("Invalid JET security envelope"));
+            return;
+        }
+        const auto profile = security.attribute(QStringLiteral("type"));
+        const auto length = keySize(security.attribute(QStringLiteral("cipher")));
+        auto *transport = manager_->d->forProfile(profile);
+        if (!transport || !session_->allowsEncryptionMethod(transport->methodId()) || !length) {
+            done({}, QStringLiteral("Unsupported JET key transport or cipher"));
+            return;
+        }
+
+        const auto methodId = transport->methodId();
+        QPointer<Pad> guard(this);
+        transport->decryptSecret(
+            session_->peer(), security,
+            [guard, methodId, profile, length, done](const std::optional<ProtectedSecret> &secret,
+                                                     const QString &error) {
+                if (!guard || !guard->manager_)
+                    return;
+                if (!guard->manager_->d->forMethod(methodId) || !secret || !validSecret(*secret)
+                    || secret->key.size() != *length || !secret->authentication.isValid()
+                    || secret->authentication.method != methodId || secret->type != profile) {
+                    done({}, error.isEmpty() ? QStringLiteral("Invalid incoming JET key exchange") : error);
+                } else {
+                    done(secret, {});
+                }
+            });
+    }
+
+    Protection::Protection(Pad *pad, QObject *owner, const QString &contentName) :
+        QObject(owner), pad_(pad), contentName_(contentName)
+    {
+        Q_ASSERT(pad_);
+    }
+
+    Protection::~Protection()
+    {
+        QObject::disconnect(removed_);
+        QObject::disconnect(providerDestroyed_);
+    }
+
+    bool Protection::setIncomingContent(const QDomElement &content)
+    {
+        if (prepared_ || preparing_)
+            return false;
+        incomingSecurity_.clear();
+        for (auto child = content.firstChildElement(QStringLiteral("security")); !child.isNull();
+             child = child.nextSiblingElement(QStringLiteral("security"))) {
+            if (child.namespaceURI() != Manager::ns())
+                continue;
+            if (!incomingSecurity_.isNull())
+                return false;
+            incomingSecurity_ = document_.importNode(child, true).toElement();
+        }
+        return incomingSecurity_.isNull()
+            || incomingSecurity_.attribute(QStringLiteral("name")) == contentName_;
+    }
+
+    void Protection::prepare(bool outgoing, const Done &done)
+    {
+        if (preparing_)
+            return;
+        if (prepared_) {
+            done({});
+            return;
+        }
+        if (!pad_ || !pad_->session()) {
+            done(QStringLiteral("JET session is unavailable"));
+            return;
+        }
+
+        outgoing_ = outgoing;
+        const auto *session = pad_->session();
+        const bool protectedIncoming = !incomingSecurity_.isNull();
+        const bool needCrypto = outgoing ? session->isEndToEndPreferred() : protectedIncoming;
+        const bool mandatory = protectedIncoming || session->isEndToEndRequired();
+
+        if (!needCrypto) {
+            prepared_ = true;
+            done(!outgoing && mandatory ? QStringLiteral("Incoming offer has no JET security") : QString());
+            return;
+        }
+
+        auto *registry = pad_->manager();
+        if (!registry) {
+            done(mandatory ? QStringLiteral("JET key transport is unavailable") : QString());
+            if (!mandatory)
+                prepared_ = true;
+            return;
+        }
+
+        preparing_ = true;
+        done_ = done;
+        QPointer<Protection> guard(this);
+        removed_ = connect(registry, &Manager::keyTransportRemoved, this, [guard](const QString &) {
+            if (guard && guard->preparing_)
+                guard->complete({}, QStringLiteral("JET key transport was unloaded"));
+        });
+        providerDestroyed_ = connect(registry, &QObject::destroyed, this, [guard]() {
+            if (guard && guard->preparing_)
+                guard->complete({}, QStringLiteral("JET manager was destroyed"));
+        });
+
+        auto completed = [guard](const std::optional<ProtectedSecret> &secret, const QString &error) {
+            if (guard && guard->preparing_)
+                guard->complete(secret, error);
         };
+        if (protectedIncoming)
+            pad_->prepareIncoming(incomingSecurity_, contentName_, completed);
+        else
+            pad_->prepareOutgoing(completed);
+    }
 
-        // GCM encrypts with AES-CTR starting at the counter block IV || 2 (for a 96-bit IV). The tag is
-        // checked by encrypting the decrypted data again with GCM, which yields the same ciphertext and tag.
-        class Decryptor final : public StreamCipher {
-        public:
-            Decryptor(const QByteArray &key, const QByteArray &iv) :
-                ctr(algorithm(int(key.size())), QCA::Cipher::CTR, QCA::Cipher::NoPadding, QCA::Decode,
-                    QCA::SymmetricKey(key), QCA::InitializationVector(iv + QByteArray::fromHex("00000002"))),
-                check(gcm(key, iv))
-            {
+    void Protection::complete(const std::optional<ProtectedSecret> &secret, const QString &error)
+    {
+        if (!preparing_)
+            return;
+        preparing_ = false;
+        QObject::disconnect(removed_);
+        QObject::disconnect(providerDestroyed_);
+
+        auto *session = pad_ ? pad_->session() : nullptr;
+        const bool mandatory = !incomingSecurity_.isNull() || (session && session->isEndToEndRequired());
+        QString failure = error;
+
+        if (secret && !session)
+            failure = QStringLiteral("JET session ended during key preparation");
+        else if (secret && !incomingSecurity_.isNull()) {
+            const auto previous = session->peerAuthentication();
+            const auto &auth = secret->authentication;
+            if (previous.isValid()
+                && (previous.method != auth.method || previous.deviceId != auth.deviceId
+                    || previous.identityKey != auth.identityKey)) {
+                failure = QStringLiteral("JET peer identity changed");
+            } else if (session->isEndToEndRequired() && !trusted(auth.trustLevel)) {
+                failure = QStringLiteral("JET peer device is not trusted");
             }
-            QByteArray process(const QByteArray &data) override
-            {
-                held += data;
-                if (held.size() <= TagSize)
-                    return {};
-                const auto ciphertext = held.left(held.size() - TagSize);
-                held                  = held.right(TagSize);
-                const auto plaintext  = ctr.update(ciphertext).toByteArray();
-                // ok() of a QCA cipher is only meaningful after an operation.
-                failed = failed || !ctr.ok() || plaintext.size() != ciphertext.size();
-                check.update(plaintext);
-                return plaintext;
-            }
-            QByteArray finish() override { return {}; }
-            bool       verify() override
-            {
-                if (verified)
-                    return *verified;
-                check.final();
-                verified = held.size() == TagSize && !failed && check.ok() && check.tag().toByteArray() == held;
-                return *verified;
-            }
+        }
 
-        private:
-            QCA::Cipher         ctr;
-            QCA::Cipher         check;
-            QByteArray          held;
-            bool                failed = false;
-            std::optional<bool> verified;
-        };
+        if (failure.isEmpty() && secret) {
+            secret_ = secret;
+            if (!incomingSecurity_.isNull())
+                session->setPeerAuthentication(secret->authentication);
+        } else if (mandatory && failure.isEmpty()) {
+            failure = QStringLiteral("JET key exchange failed");
+        }
+
+        if (!mandatory && !secret_)
+            failure.clear(); // preferred encryption may fall back to plaintext
+        prepared_ = failure.isEmpty();
+        auto callback = std::move(done_);
+        if (callback)
+            callback(failure);
     }
 
-    std::optional<int> keySize(const QString &cipher)
+    QDomElement Protection::outgoingSecurity(QDomDocument *document) const
     {
-        auto name = cipher;
-        if (name.endsWith(QLatin1String(":0")))
-            name.chop(2);
-        if (name == QLatin1String("urn:xmpp:ciphers:aes-128-gcm-nopadding"))
-            return 16;
-        if (name == QLatin1String("urn:xmpp:ciphers:aes-256-gcm-nopadding"))
-            return 32;
-        return std::nullopt;
-    }
-
-    QString cipherFor(int keySize)
-    {
-        return keySize == 32 ? QStringLiteral("urn:xmpp:ciphers:aes-256-gcm-nopadding")
-                             : QStringLiteral("urn:xmpp:ciphers:aes-128-gcm-nopadding");
-    }
-
-    bool StreamCipher::isSupported(int keySize)
-    {
-        const auto name = algorithm(keySize);
-        return (keySize == 16 || keySize == 32) && QCA::isSupported(qPrintable(name + QStringLiteral("-gcm")))
-            && QCA::isSupported(qPrintable(name + QStringLiteral("-ctr")));
-    }
-
-    std::unique_ptr<StreamCipher> StreamCipher::encryptor(const QByteArray &key, const QByteArray &iv)
-    {
-        if (!isSupported(int(key.size())) || iv.size() != 12)
+        if (!document || !outgoing_ || !secret_)
             return {};
-        return std::make_unique<Encryptor>(key, iv);
+        auto security = document->createElementNS(Manager::ns(), QStringLiteral("security"));
+        security.setAttribute(QStringLiteral("name"), contentName_);
+        security.setAttribute(QStringLiteral("cipher"), secret_->cipher);
+        security.setAttribute(QStringLiteral("type"), secret_->type);
+        security.appendChild(document->importNode(secret_->envelope, true));
+        return security;
     }
 
-    std::unique_ptr<StreamCipher> StreamCipher::decryptor(const QByteArray &key, const QByteArray &iv)
+    XMPP::Jingle::Connection::Ptr Protection::wrap(XMPP::Jingle::Connection::Ptr raw, bool sending, quint64 plainSize)
     {
-        // The CTR shortcut needs the 96-bit IV of JET.
-        if (!isSupported(int(key.size())) || iv.size() != 12)
+        if (!prepared_ || !raw)
             return {};
-        return std::make_unique<Decryptor>(key, iv);
+        if (!secret_)
+            return raw;
+        if (connectionUsed_)
+            return {}; // No reuse of an AES-GCM key/IV across transport replacements.
+        connectionUsed_ = true;
+        auto wrapped = XMPP::Jingle::Connection::Ptr(
+            new JET::Connection(raw, secret_->key, secret_->iv, sending, plainSize));
+        auto *jet = static_cast<JET::Connection *>(wrapped.data());
+        if (!jet->isValid())
+            return {};
+        activeConnection_ = jet;
+        connect(jet, &ByteStream::error, this, [this, jet](int) {
+            const QString error = jet->errorText();
+            emit failed(error);
+        });
+        return wrapped;
     }
-}}}
+
+    bool Protection::authenticated() const
+    {
+        if (!secret_)
+            return true;
+        auto *jet = qobject_cast<JET::Connection *>(activeConnection_.data());
+        return jet && jet->authenticated();
+    }
+}}} // namespace XMPP::Jingle::JET

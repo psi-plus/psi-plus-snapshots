@@ -109,6 +109,9 @@ namespace XMPP { namespace Jingle {
 
         virtual SetDescError setRemoteOffer(const QDomElement &description)  = 0;
         virtual SetDescError setRemoteAnswer(const QDomElement &description) = 0;
+        // Content-level extensions are validated after description/transport
+        // parsing. Applications retain only the extension data they need.
+        virtual bool         setRemoteContentExtensions(const QDomElement &) { return true; }
         virtual QDomElement  makeLocalOffer()                                = 0;
         virtual QDomElement  makeLocalAnswer()                               = 0;
 
