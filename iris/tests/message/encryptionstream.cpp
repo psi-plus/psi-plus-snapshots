@@ -3,6 +3,7 @@
 #include <iris/xmpp_client.h>
 #include <iris/xmpp_clientstream.h>
 #include <iris/xmpp_encryption.h>
+#include <iris/xmpp_message.h>
 
 #include <QCoreApplication>
 #include <QDebug>
@@ -217,13 +218,110 @@ static void exercisePendingIncomingCancellation()
     }
     check(delivered == 2, "Both incoming decrypt operations must deliver");
 
-    inject(QStringLiteral("obsolete"));
-    check(method.pending.size() == 3 && method.pending.last().job,
-          "Could not start a pending decryption before disconnect");
-    QPointer<EncryptionJob> obsolete = method.pending.last().job;
+    // The room's delayed messages use the normal messageReceived path even
+    // when the asynchronous decrypt job fails. Unlike the method's private
+    // copy, the original input document has gone out of scope at completion.
+    const Jid room(QStringLiteral("room@conference.example.test"));
+    check(client.groupChatJoin(room.domain(), room.node(), QStringLiteral("Bob")), "Could not join test MUC");
+    {
+        QDomDocument doc;
+        auto presence = doc.createElementNS(QStringLiteral("jabber:client"), QStringLiteral("presence"));
+        doc.appendChild(presence);
+        presence.setAttribute(QStringLiteral("from"), room.bare() + QStringLiteral("/Bob"));
+        auto user = doc.createElementNS(QStringLiteral("http://jabber.org/protocol/muc#user"), QStringLiteral("x"));
+        auto item = doc.createElementNS(user.namespaceURI(), QStringLiteral("item"));
+        item.setAttribute(QStringLiteral("jid"), QStringLiteral("bob@example.test/device"));
+        item.setAttribute(QStringLiteral("affiliation"), QStringLiteral("member"));
+        item.setAttribute(QStringLiteral("role"), QStringLiteral("participant"));
+        user.appendChild(item);
+        auto status = doc.createElementNS(user.namespaceURI(), QStringLiteral("status"));
+        status.setAttribute(QStringLiteral("code"), QStringLiteral("110"));
+        user.appendChild(status);
+        presence.appendChild(user);
+        stream.inject(presence);
+    }
+
+    QList<Message> failed;
+    QStringList diagnostics;
+    QObject::connect(&client, &Client::messageReceived, &client, [&](const Message &message) {
+        if (message.decryptionFailure() != Message::DecryptionFailure::None)
+            failed.append(message);
+    });
+    QObject::connect(&client, &Client::stanzaDecryptionFailed, &client,
+                     [&](const QString &methodId, const Jid &peer, EncryptionJob::Error, const QString &,
+                         const EncryptionMetadata &metadata) {
+        check(methodId == method.id() && peer.bare() == room.bare()
+                  && metadata.details.value(QStringLiteral("archiveReplay")).toBool(),
+              "Wrong deferred archive failure context");
+        diagnostics.append(peer.full());
+    });
+    const auto injectHistory = [&](const QString &id, const QString &nick, const QString &stamp) {
+        QDomDocument doc;
+        auto message = doc.createElementNS(QStringLiteral("jabber:client"), QStringLiteral("message"));
+        doc.appendChild(message);
+        message.setAttribute(QStringLiteral("type"), QStringLiteral("groupchat"));
+        message.setAttribute(QStringLiteral("id"), id);
+        message.setAttribute(QStringLiteral("from"), room.bare() + QLatin1Char('/') + nick);
+        message.setAttribute(QStringLiteral("to"), QStringLiteral("bob@example.test/device"));
+        auto encrypted = doc.createElementNS(QStringLiteral("urn:psi:test:deferred-incoming"), QStringLiteral("encrypted"));
+        message.appendChild(encrypted);
+        auto body = doc.createElementNS(QStringLiteral("jabber:client"), QStringLiteral("body"));
+        body.appendChild(doc.createTextNode(QStringLiteral("Untrusted fallback")));
+        message.appendChild(body);
+        auto replace = doc.createElementNS(QStringLiteral("urn:xmpp:message-correct:0"), QStringLiteral("replace"));
+        replace.setAttribute(QStringLiteral("id"), QStringLiteral("unrelated-message"));
+        message.appendChild(replace);
+        auto delay = doc.createElementNS(QStringLiteral("urn:xmpp:delay"), QStringLiteral("delay"));
+        delay.setAttribute(QStringLiteral("from"), room.bare());
+        delay.setAttribute(QStringLiteral("stamp"), stamp);
+        message.appendChild(delay);
+        auto sid = doc.createElementNS(QStringLiteral("urn:xmpp:sid:0"), QStringLiteral("stanza-id"));
+        sid.setAttribute(QStringLiteral("by"), room.bare());
+        sid.setAttribute(QStringLiteral("id"), QStringLiteral("archive-") + id);
+        message.appendChild(sid);
+        stream.inject(message);
+    };
+    injectHistory(QStringLiteral("first"), QStringLiteral("Alice"), QStringLiteral("2026-01-01T00:00:01Z"));
+    injectHistory(QStringLiteral("second"), QStringLiteral("Carol"), QStringLiteral("2026-01-01T00:00:02Z"));
+    check(method.pending.size() == 4 && failed.isEmpty() && delivered == 2,
+          "Concurrent archive jobs did not remain pending");
+
+    // Remove the test method's own XML copies and complete in reverse order.
+    // Only Client's retained envelope may be used to construct the failure.
+    method.pending[2].stanza.clear();
+    method.pending[3].stanza.clear();
+    method.pending[3].job->fail(EncryptionJob::Error::NoRecipients, QStringLiteral("No recipient key"));
+    method.pending[2].job->fail(EncryptionJob::Error::NoSession, QStringLiteral("Missing ratchet"));
+    check(failed.size() == 2 && delivered == 4 && diagnostics.size() == 2,
+          "Deferred archive failures did not produce exactly two messages");
+    for (int i = 0; i < 2; ++i) {
+        const auto &message = failed.at(i);
+        const QString id = i == 0 ? QStringLiteral("second") : QStringLiteral("first");
+        const QString nick = i == 0 ? QStringLiteral("Carol") : QStringLiteral("Alice");
+        const auto stamp = QDateTime::fromString(i == 0 ? QStringLiteral("2026-01-01T00:00:02Z")
+                                                       : QStringLiteral("2026-01-01T00:00:01Z"), Qt::ISODate);
+        check(message.id() == id && message.from().full() == room.bare() + QLatin1Char('/') + nick
+                  && diagnostics.at(i) == message.from().full()
+                  && message.stanzaId(room).id == QStringLiteral("archive-") + id
+                  && message.timeStamp() == stamp && message.spooled() && message.wasEncrypted()
+                  && message.encryptionProtocol() == method.id()
+                  && message.body().isEmpty() && message.replaceId().isEmpty()
+                  && message.decryptionFailure() == (i == 0 ? Message::DecryptionFailure::NotForThisDevice
+                                                             : Message::DecryptionFailure::Failed),
+              "Deferred archive failure lost its envelope or exposed unauthenticated content");
+    }
+
+    injectHistory(QStringLiteral("obsolete"), QStringLiteral("Alice"), QStringLiteral("2026-01-01T00:00:03Z"));
+    inject(QStringLiteral("obsolete-direct"));
+    check(method.pending.size() == 6 && method.pending.at(4).job && method.pending.at(5).job,
+          "Could not start pending archive and direct decryptions before disconnect");
+    QPointer<EncryptionJob> obsoleteArchive = method.pending.at(4).job;
+    QPointer<EncryptionJob> obsoleteDirect = method.pending.at(5).job;
     client.close();
     QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
-    check(obsolete.isNull() && delivered == 2, "Disconnect did not cancel the pending decryption job");
+    check(obsoleteArchive.isNull() && obsoleteDirect.isNull() && delivered == 4
+              && failed.size() == 2 && diagnostics.size() == 2,
+          "Disconnect did not cancel pending direct and archive decryption jobs");
 }
 
 static EncryptionJob *await(EncryptionJob *job)

@@ -37,6 +37,10 @@ QList<QSqlRecord> localRecords(QSqlDatabase db, const QString &account, const QS
                                QSqlError *error = nullptr);
 DisplayedCursor   sentDisplayedCursor(QSqlDatabase db, const QString &account, const QString &peer,
                                       QSqlError *error = nullptr);
+// Match a room delivery independently of its decoded projection, but
+// require the same sender and client message ID as well as the room ID.
+qint64 matchingRoomDelivery(QSqlDatabase db, qint64 contact, const QString &room, const QString &uid,
+                            const Entry &entry, QSqlError *error = nullptr);
 qint64   matchingDelivery(QSqlDatabase db, qint64 contact, const Entry &, bool archived, QSqlError *error = nullptr);
 qint64   matchingOwnPlaintext(QSqlDatabase db, const Key &, const QString &id, const QString &sender, const QDateTime &,
                               QSqlError *error = nullptr);

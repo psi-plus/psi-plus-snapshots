@@ -106,6 +106,10 @@ public:
     void           send(const QString &);
     // Iris owns protocol-scoped sessions. Applications own their conversation
     // sessions and decrypt incoming stanzas through this callback.
+    // On groupchat archive replay the historical sender JID may be absent:
+    // restore a previously authenticated local projection if available.
+    // Otherwise a method requiring NonAnonymous must reject decryption
+    // without mucRealSender; do not resolve a historical nick via presence.
     enum class EncryptionSessionPurpose { Message, Groupchat, Carbon, Protocol };
     using IncomingEncryptedStanzaHandler = std::function<EncryptionJob *(
         const QDomElement &, const QString &methodId, const EncryptionContext &, EncryptionSessionPurpose)>;

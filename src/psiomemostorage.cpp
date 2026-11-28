@@ -665,7 +665,11 @@ XMPP::EncryptionTrustLevel PsiOmemoStorage::trustLevel(const QString &methodId, 
     q.addBindValue(methodId);
     q.addBindValue(owner.bare());
     q.addBindValue(keyId);
-    if (!q.exec() || !q.next())
+    if (!q.exec()) {
+        qWarning() << "OMEMO trust lookup failed:" << q.lastError();
+        return XMPP::EncryptionTrustLevel::Undecided;
+    }
+    if (!q.next())
         return XMPP::EncryptionTrustLevel::Undecided;
     return static_cast<XMPP::EncryptionTrustLevel>(q.value(0).toUInt());
 }
@@ -679,7 +683,11 @@ bool PsiOmemoStorage::setTrustLevel(const QString &methodId, const XMPP::Jid &ow
     q.addBindValue(owner.bare());
     q.addBindValue(keyId);
     q.addBindValue(static_cast<int>(level));
-    return q.exec();
+    if (!q.exec()) {
+        qWarning() << "OMEMO trust write failed:" << q.lastError();
+        return false;
+    }
+    return true;
 }
 
 bool PsiOmemoStorage::removeTrust(const QString &methodId, const XMPP::Jid &owner, const QByteArray &keyId)

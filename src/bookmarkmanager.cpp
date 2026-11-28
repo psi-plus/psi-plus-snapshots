@@ -145,6 +145,7 @@ void BookmarkManager::syncConferences()
             bookmark.setAutoJoin(ConferenceBookmark::OnlyThisComputer);
         else if (ignored.contains(native.room().bare()))
             bookmark.setAutoJoin(ConferenceBookmark::ExceptThisComputer);
+        bookmark.setStoreHistory(d->account->mucHistoryEnabled(native.room()));
         rooms.append(bookmark);
     }
     if (d->conferences == rooms)
@@ -162,6 +163,8 @@ void BookmarkManager::updateLocalPreferences(const QList<ConferenceBookmark> &ba
 
     auto local = d->account->localMucBookmarks();
     auto ignored = d->account->ignoreMucBookmarks();
+    auto historyRooms = d->account->mucHistoryRooms();
+    const auto oldHistoryRooms = historyRooms;
     bool changed = false;
     const auto update = [&local, &ignored, &changed](const QString &id,
                                                      const ConferenceBookmark *room) {
@@ -193,15 +196,26 @@ void BookmarkManager::updateLocalPreferences(const QList<ConferenceBookmark> &ba
         const auto prev = old.constFind(id);
         if (prev == old.cend() || !(prev.value() == room))
             update(id, &room);
+        if (prev == old.cend() || prev.value().storeHistory() != room.storeHistory()) {
+            historyRooms.removeAll(id);
+            if (room.storeHistory())
+                historyRooms.append(id);
+        }
     }
-    for (const auto &room : baseline)
-        if (!requested.contains(room.jid().bare()))
+    for (const auto &room : baseline) {
+        if (!requested.contains(room.jid().bare())) {
             update(room.jid().bare(), nullptr);
+            historyRooms.removeAll(room.jid().bare());
+        }
+    }
     if (changed) {
         d->account->setLocalMucBookmarks(local);
         d->account->setIgnoreMucBookmarks(ignored);
-        syncConferences();
     }
+    if (historyRooms != oldHistoryRooms)
+        d->account->setMucHistoryRooms(historyRooms);
+    if (changed || historyRooms != oldHistoryRooms)
+        syncConferences();
 }
 
 bool BookmarkManager::setBookmarks(const QList<URLBookmark> &urls,

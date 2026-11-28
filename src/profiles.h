@@ -99,6 +99,7 @@ public:
 
     QStringList alwaysVisibleContacts;
     QStringList localMucBookmarks, ignoreMucBookmarks;
+    QStringList mucHistoryRooms; // Device-local, canonical bare room JIDs.
 
     QString optionsBase;
 

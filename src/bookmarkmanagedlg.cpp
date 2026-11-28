@@ -73,6 +73,7 @@ BookmarkManageDlg::BookmarkManageDlg(PsiAccount *account) : QDialog(), account_(
     connect(ui_.nickname, SIGNAL(textEdited(const QString &)), SLOT(updateCurrentItem()));
     connect(ui_.password, SIGNAL(textEdited(const QString &)), SLOT(updateCurrentItem()));
     connect(ui_.autoJoin, SIGNAL(activated(int)), SLOT(updateCurrentItem()));
+    connect(ui_.storeHistory, &QCheckBox::clicked, this, &BookmarkManageDlg::updateCurrentItem);
 
     loadBookmarks();
 
@@ -109,15 +110,18 @@ void BookmarkManageDlg::loadBookmarks()
         item->setData(QVariant(c.autoJoin()), AutoJoinRole);
         item->setData(QVariant(c.nick()), NickRole);
         item->setData(QVariant(c.password()), PasswordRole);
+        item->setData(c.storeHistory(), StoreHistoryRole);
         appendItem(item);
     }
 }
 
 ConferenceBookmark BookmarkManageDlg::bookmarkFor(const QModelIndex &index) const
 {
-    return ConferenceBookmark(index.data(MucNameRole).toString(), index.data(JidRole).toString(),
-                              ConferenceBookmark::JoinType(index.data(AutoJoinRole).toInt()),
-                              index.data(NickRole).toString(), index.data(PasswordRole).toString());
+    ConferenceBookmark bookmark(index.data(MucNameRole).toString(), index.data(JidRole).toString(),
+                                ConferenceBookmark::JoinType(index.data(AutoJoinRole).toInt()),
+                                index.data(NickRole).toString(), index.data(PasswordRole).toString());
+    bookmark.setStoreHistory(index.data(StoreHistoryRole).toBool());
+    return bookmark;
 }
 
 bool BookmarkManageDlg::saveBookmarks()
@@ -215,8 +219,9 @@ void BookmarkManageDlg::showCurrentBookmark()
     ui_.password->setText(current.data(PasswordRole).toString());
     ui_.password->setCursorPosition(0);
     ui_.autoJoin->setCurrentIndex(current.data(AutoJoinRole).toInt());
+    ui_.storeHistory->setChecked(current.data(StoreHistoryRole).toBool());
     QList<QWidget *> editors;
-    editors << ui_.mucName << ui_.host << ui_.room << ui_.nickname << ui_.password << ui_.autoJoin;
+    editors << ui_.mucName << ui_.host << ui_.room << ui_.nickname << ui_.password << ui_.autoJoin << ui_.storeHistory;
     for (QWidget *w : std::as_const(editors)) {
         w->setEnabled(current.isValid());
     }
@@ -245,6 +250,7 @@ void BookmarkManageDlg::updateCurrentItem()
         item->setData(QVariant(ui_.autoJoin->currentIndex()), AutoJoinRole);
         item->setData(QVariant(ui_.nickname->text()), NickRole);
         item->setData(QVariant(ui_.password->text()), PasswordRole);
+        item->setData(ui_.storeHistory->isChecked(), StoreHistoryRole);
     }
 }
 

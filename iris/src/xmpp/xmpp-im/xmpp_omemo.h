@@ -76,6 +76,7 @@ public:
     QString           id() const override;
     QString           name() const override;
     Capabilities      capabilities() const override;
+    GroupchatRequirements groupchatRequirements() const override;
     EncryptedSession *startSession(Capabilities caps, const EncryptionContext &context) override;
     Features          features() const override;
     bool              canDecrypt(const QDomElement &stanza) const override;

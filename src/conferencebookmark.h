@@ -44,6 +44,8 @@ public:
     void             setAutoJoin(JoinType type);
     const QString   &nick() const;
     const QString   &password() const;
+    bool             storeHistory() const { return storeHistory_; }
+    void             setStoreHistory(bool enabled) { storeHistory_ = enabled; }
 
     bool isNull() const;
 
@@ -58,6 +60,8 @@ private:
     JoinType  auto_join_;
     QString   nick_;
     QString   password_;
+    // Local presentation preference; deliberately excluded from bookmark XML.
+    bool      storeHistory_ = false;
 };
 
 #endif // CONFERENCEBOOKMARK_H

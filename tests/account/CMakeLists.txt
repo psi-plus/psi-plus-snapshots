@@ -37,7 +37,8 @@ elseif(TARGET Iris::Iris)
     set(ACCOUNT_IRIS_TARGET Iris::Iris)
 endif()
 if(ACCOUNT_IRIS_TARGET)
-    add_executable(account_message_receipt_test messagereceipt.cpp ../../src/accountincomingmessage.cpp)
+    add_executable(account_message_receipt_test messagereceipt.cpp ../../src/accountincomingmessage.cpp
+        ../../src/conferencebookmark.cpp)
     set_target_properties(account_message_receipt_test PROPERTIES AUTOMOC ON)
     target_include_directories(account_message_receipt_test PRIVATE ../../src)
     target_link_libraries(account_message_receipt_test PRIVATE ${ACCOUNT_IRIS_TARGET}

@@ -29,6 +29,7 @@
 
 class PsiAccount;
 class QWidget;
+class QMenu;
 
 namespace XMPP {
 class Client;
@@ -68,6 +69,16 @@ public:
                               = XMPP::EncryptionMethod::XmppStanza) const;
     bool              hasMethod(const QString &methodId) const;
     MethodInfo        methodInfo(const QString &methodId) const;
+    XMPP::EncryptionMethod::GroupchatRequirements groupchatRequirements(const QString &methodId) const;
+    QString groupchatAvailabilityError(const QString &methodId, bool roomInfoKnown, bool membersOnly,
+                                       bool nonAnonymous) const;
+    void populateMethodMenu(QMenu *menu, XMPP::EncryptionMethod::Capabilities capabilities,
+                            const QString &current, const std::function<QString(const QString &)> &unavailableReason,
+                            const std::function<void(const QString &)> &select) const;
+    // Retry only after at least one trust decision was requested and approved.
+    void requestGroupchatTrustDecision(const QString &methodId, const QList<XMPP::Jid> &members,
+                                       QWidget *parent, QObject *scope, std::function<void(bool)> completion);
+    bool isDuplicateDecryptionFailure(const QString &methodId, const XMPP::EncryptionMetadata &metadata) const;
 
     // Persistent per-contact preference. An open chat copies this value when
     // it is created and then owns an independent active method/session.
@@ -85,6 +96,7 @@ public:
     // otherwise @a completion runs after the answer.
     bool    requestJingleTrustDecision(const XMPP::Jid &jid, QWidget *parent, std::function<void()> completion);
     bool    setSelectedMethod(const XMPP::Jid &jid, const QString &methodId);
+    void    adoptIncomingGroupchatMethod(const XMPP::Jid &room, const QString &methodId);
 
     QMap<QString, QString> selectedMethods() const;
     void                   setSelectedMethods(const QMap<QString, QString> &methods);
@@ -120,7 +132,7 @@ public:
 
 #ifdef IRIS_ENABLE_OMEMO
     XMPP::OmemoEncryption *omemoEncryption() const;
-    void                   setUpOmemo(const QString &deviceLabel);
+    void                   setUpOmemo(const QString &deviceLabel = {});
 #endif
 
 signals:
@@ -131,6 +143,12 @@ signals:
     void encryptionError(const XMPP::Jid &jid, const QString &message);
 
 private:
+#ifdef IRIS_ENABLE_OMEMO
+    class TrustReviewDialog;
+    bool enqueueTrustReview(std::function<QList<XMPP::OmemoDeviceInfo>()> collect,
+                            PsiOmemo::DeviceDecision purpose, QWidget *parent,
+                            std::function<void(bool)> completion);
+#endif
     class PluginMethodAdapter;
     struct PluginRegistration;
 
@@ -146,13 +164,12 @@ private:
     QMap<QString, QString>                                  selectedMethods_;
     QHash<EncryptionMethodProvider *, PluginRegistration *> pluginMethods_;
     QHash<QString, EncryptionMethodProvider *>              pluginMethodsById_;
-    QHash<QString, QList<std::function<void(bool)>>>        trustPromptWaiters_;
-    QSet<QString>                                           trustPromptsActive_;
     QHash<QString, qint64>                                  decryptionRecoveryAttempts_;
     QSet<QString>                                           decryptionRecoveriesActive_;
     QHash<QString, qint64>                                  decryptionFailureNotices_;
 
 #ifdef IRIS_ENABLE_OMEMO
+    QPointer<TrustReviewDialog> trustReview_;
     std::unique_ptr<PsiOmemoStorage> omemoStorage_;
     XMPP::OmemoEncryption           *omemo_ = nullptr;
     QSet<QString>                    legacyOmemoEnabled_;

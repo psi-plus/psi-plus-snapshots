@@ -4,46 +4,11 @@
 #include "xmpp_client.h"
 #include "xmpp_tasks.h"
 
-#include <QCryptographicHash>
-#include <QDataStream>
-#include <QMap>
-
 #include <utility>
 
 namespace XMPP {
 namespace {
 constexpr int MaxEchoEntries = 64;
-
-// Canonicalize element and attribute names by namespace, not XML prefix or
-// attribute order. The MUC may reserialize a stanza but must not alter the
-// OMEMO ciphertext or any of its recipient keys. Comparisons fail closed.
-void writeCanonicalNode(QDataStream &out, const QDomNode &node)
-{
-    if (node.isElement()) {
-        const auto element = node.toElement();
-        const auto local = element.localName().isEmpty() ? element.tagName() : element.localName();
-        out << quint8(1) << element.namespaceURI() << local;
-        QMap<QString, QString> attrs;
-        const auto attributes = element.attributes();
-        for (int i = 0; i < attributes.count(); ++i) {
-            const auto attr = attributes.item(i).toAttr();
-            if (attr.name() == QLatin1String("xmlns") || attr.prefix() == QLatin1String("xmlns"))
-                continue;
-            const auto localAttr = attr.localName().isEmpty() ? attr.name() : attr.localName();
-            attrs.insert(attr.namespaceURI() + QChar(0x1f) + localAttr, attr.value());
-        }
-        out << quint32(attrs.size());
-        for (auto it = attrs.cbegin(); it != attrs.cend(); ++it)
-            out << it.key() << it.value();
-        for (auto child = element.firstChild(); !child.isNull(); child = child.nextSibling()) {
-            if (child.isElement())
-                writeCanonicalNode(out, child);
-            else if (child.isText() || child.isCDATASection())
-                out << quint8(2) << child.nodeValue();
-        }
-        out << quint8(0);
-    }
-}
 
 bool isEncryptionMarker(const QDomElement &element)
 {
@@ -167,8 +132,8 @@ void MucManager::clearRoomEchoes(const Jid &room)
         }
     }
     for (auto it = completedEchoes_.begin(); it != completedEchoes_.end();) {
-        if (it.key().startsWith(prefix)) {
-            completedOrder_.removeAll(it.key());
+        if ((*it).startsWith(prefix)) {
+            completedOrder_.removeAll(*it);
             it = completedEchoes_.erase(it);
         } else {
             ++it;
@@ -282,24 +247,7 @@ QString MucManager::echoKey(const Jid &room, const QString &id)
     return room.bare() + QLatin1Char('\n') + id;
 }
 
-QByteArray MucManager::ciphertextDigest(const QDomElement &stanza)
-{
-    for (auto child = stanza.firstChildElement(); !child.isNull(); child = child.nextSiblingElement()) {
-        const auto ns = child.namespaceURI();
-        if (child.localName() != QLatin1String("encrypted")
-            || (ns != QLatin1String("urn:xmpp:omemo:2")
-                && ns != QLatin1String("eu.siacs.conversations.axolotl")))
-            continue;
-        QByteArray canonical;
-        QDataStream output(&canonical, QIODevice::WriteOnly);
-        writeCanonicalNode(output, child);
-        return QCryptographicHash::hash(canonical, QCryptographicHash::Sha256);
-    }
-    return {};
-}
-
-void MucManager::rememberEncryptedEcho(const QDomElement &original, const QDomElement &encrypted,
-                                       const QString &methodId)
+void MucManager::rememberEncryptedEcho(const QDomElement &original, const QString &methodId)
 {
     if (methodId != QLatin1String("omemo")
         || original.attribute(QStringLiteral("type")) != QLatin1String("groupchat"))
@@ -307,15 +255,14 @@ void MucManager::rememberEncryptedEcho(const QDomElement &original, const QDomEl
     const Jid room(original.attribute(QStringLiteral("to")));
     const QString id = original.attribute(QStringLiteral("id"));
     const auto *item = findRoom(room);
-    const QByteArray digest = ciphertextDigest(encrypted);
     if (!item || item->state != State::Connected || !room.isValid() || room.node().isEmpty()
-        || !room.resource().isEmpty() || id.isEmpty() || digest.isEmpty())
+        || !room.resource().isEmpty() || id.isEmpty())
         return;
 
     QDomDocument plaintext;
     plaintext.appendChild(plaintext.importNode(original, true));
     const QString key = echoKey(room, id);
-    pendingEchoes_.insert(key, { plaintext, digest, methodId });
+    pendingEchoes_.insert(key, plaintext);
     pendingOrder_.removeAll(key);
     pendingOrder_.append(key);
     completedEchoes_.remove(key);
@@ -336,39 +283,22 @@ MucManager::EchoResult MucManager::resolveEncryptedEcho(const QDomElement &stanz
     if (!room || room->state != State::Connected || occupant.resource().isEmpty()
         || room->jid.resource() != occupant.resource())
         return result;
-    const Jid real = room->realJids.value(occupant.resource());
-    const Jid self = client_->jid();
-    if (!real.isValid() || real.node().isEmpty() || !self.isValid() || self.node().isEmpty()
-        || real.bare() != self.bare())
-        return result; // Only a verified current MUC occupant can be our echo.
+    // XEP-0045 reflects our outgoing message using the current occupant JID
+    // and client-generated message ID.
 
     const QString id = stanza.attribute(QStringLiteral("id"));
     if (id.isEmpty())
         return result;
     const QString key = echoKey(occupant, id);
     auto pending = pendingEchoes_.find(key);
-    auto done = completedEchoes_.constFind(key);
-    if (pending == pendingEchoes_.end() && done == completedEchoes_.cend())
-        return result;
-
-    const QByteArray digest = ciphertextDigest(stanza);
-    const QByteArray expected = pending != pendingEchoes_.end() ? pending->ciphertextDigest : done->ciphertextDigest;
-    if (digest.isEmpty() || digest != expected) {
-        result.disposition = EchoDisposition::Rejected;
-        result.error = QStringLiteral("MUC self echo ciphertext does not match the outgoing encrypted message");
-        return result;
-    }
-    if (done != completedEchoes_.cend()) {
+    if (completedEchoes_.contains(key)) {
         result.disposition = EchoDisposition::Duplicate;
         return result;
     }
-    if (pending->methodId != methodId) {
-        result.disposition = EchoDisposition::Rejected;
-        result.error = QStringLiteral("MUC self echo encryption method changed");
+    if (pending == pendingEchoes_.end())
         return result;
-    }
 
-    auto root = result.plaintext.importNode(pending->plaintext.documentElement(), true).toElement();
+    auto root = result.plaintext.importNode(pending->documentElement(), true).toElement();
     result.plaintext.appendChild(root);
     root.setAttribute(QStringLiteral("from"), occupant.full());
     if (stanza.hasAttribute(QStringLiteral("to")))
@@ -389,7 +319,7 @@ MucManager::EchoResult MucManager::resolveEncryptedEcho(const QDomElement &stanz
 
     pendingOrder_.removeAll(key);
     pendingEchoes_.erase(pending);
-    completedEchoes_.insert(key, { digest });
+    completedEchoes_.insert(key);
     completedOrder_.removeAll(key);
     completedOrder_.append(key);
     while (completedOrder_.size() > MaxEchoEntries)

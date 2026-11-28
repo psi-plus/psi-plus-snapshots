@@ -227,9 +227,17 @@ public:
     enum Capability {
         XmppStanza  = 0x1, /**< XML stanza/SCE style encryption. */
         DataMessage = 0x2, /**< An independent byte message, processed at once. */
-        DataStream  = 0x4  /**< Incremental stream/keying adapter. */
+        DataStream  = 0x4, /**< Incremental stream/keying adapter. */
+        Groupchat   = 0x8  /**< Groupchat stanza encryption; combine with XmppStanza. */
     };
     Q_DECLARE_FLAGS(Capabilities, Capability)
+
+    enum GroupchatRequirement {
+        MembersOnly  = 0x1, /**< Require a members-only room. */
+        NonAnonymous = 0x2, /**< Require real occupant identities. */
+        MemberJids   = 0x4  /**< Require the complete member/admin/owner bare JID list, including offline members. */
+    };
+    Q_DECLARE_FLAGS(GroupchatRequirements, GroupchatRequirement)
 
     explicit EncryptionMethod(QObject *parent = nullptr);
     ~EncryptionMethod() override;
@@ -242,6 +250,10 @@ public:
     virtual bool              canDecrypt(const QDomElement &stanza) const                       = 0;
     // Concrete methods decide peer support; absent discovery must not be mistaken for rejection.
     virtual Availability availability(const Jid &peer) const;
+
+    // Only meaningful for methods advertising Groupchat. The host supplies the
+    // required room information and must not send if any requirement is unmet.
+    virtual GroupchatRequirements groupchatRequirements() const { return {}; }
 
     /**
      * Resolve and validate the peer data needed to recover a failed incoming
@@ -259,6 +271,7 @@ public:
     virtual EncryptionJob *recoverDecryption(const EncryptionMetadata &metadata);
 };
 Q_DECLARE_OPERATORS_FOR_FLAGS(EncryptionMethod::Capabilities)
+Q_DECLARE_OPERATORS_FOR_FLAGS(EncryptionMethod::GroupchatRequirements)
 
 /** Registry and session factory for dynamically installable end-to-end encryption methods. */
 class EncryptionManager : public QObject {

@@ -51,7 +51,8 @@ private:
         JidRole      = Qt::UserRole + 2,
         AutoJoinRole = Qt::UserRole + 3,
         NickRole     = Qt::UserRole + 4,
-        PasswordRole = Qt::UserRole + 5
+        PasswordRole = Qt::UserRole + 5,
+        StoreHistoryRole = Qt::UserRole + 6
     };
 
     void loadBookmarks();

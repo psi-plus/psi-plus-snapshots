@@ -340,6 +340,11 @@ public:
     bool wasEncrypted() const;
     void setWasEncrypted(bool);
 
+    // Local receive status, never serialized as a wire extension.
+    enum class DecryptionFailure { None, Failed, NotForThisDevice };
+    DecryptionFailure decryptionFailure() const;
+    void setDecryptionFailure(DecryptionFailure failure);
+
     Stanza toStanza(Stream *stream) const;
     bool   fromStanza(const Stanza &s);
     bool   fromStanza(const Stanza &s, int tzoffset);

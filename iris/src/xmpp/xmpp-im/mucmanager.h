@@ -10,6 +10,7 @@
 #include <QDateTime>
 #include <QDomDocument>
 #include <QHash>
+#include <QSet>
 #include <QObject>
 #include <QStringList>
 #include <QList>
@@ -38,16 +39,14 @@ public:
     // Live mapping only; never use occupant nicks as OMEMO identities.
     Jid realJid(const Jid &occupant) const;
 
-    enum class EchoDisposition { NotEcho, Delivered, Duplicate, Rejected };
+    enum class EchoDisposition { NotEcho, Delivered, Duplicate };
     struct EchoResult {
         EchoDisposition   disposition = EchoDisposition::NotEcho;
         QDomDocument      plaintext;
         EncryptionMetadata metadata;
-        QString           error;
     };
     // Called only after OMEMO encryption succeeds, before writing the stanza.
-    void rememberEncryptedEcho(const QDomElement &original, const QDomElement &encrypted,
-                               const QString &methodId);
+    void rememberEncryptedEcho(const QDomElement &original, const QString &methodId);
     EchoResult resolveEncryptedEcho(const QDomElement &stanza, const QString &methodId);
     void clear();
 
@@ -66,27 +65,18 @@ private:
         // Presence-scoped; a nick is never a durable identity.
         QHash<QString, Jid> realJids;
     };
-    struct PendingEcho {
-        QDomDocument plaintext;
-        QByteArray ciphertextDigest;
-        QString methodId;
-    };
-    struct CompletedEcho {
-        QByteArray ciphertextDigest;
-    };
 
     Room *findRoom(const Jid &room);
     const Room *findRoom(const Jid &room) const;
     static QString echoKey(const Jid &room, const QString &id);
-    static QByteArray ciphertextDigest(const QDomElement &stanza);
     void clearRoomEchoes(const Jid &room);
     void sendPresence(const Jid &jid, const Status &status);
 
     Client *client_ = nullptr;
     QList<Room> rooms_;
-    QHash<QString, PendingEcho> pendingEchoes_;
+    QHash<QString, QDomDocument> pendingEchoes_;
     QStringList pendingOrder_;
-    QHash<QString, CompletedEcho> completedEchoes_;
+    QSet<QString> completedEchoes_;
     QStringList completedOrder_;
 };
 

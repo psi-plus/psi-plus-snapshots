@@ -90,14 +90,15 @@ void exerciseMuc(Endpoint &alice, Endpoint &bob)
 
         EncryptionContext send;
         send.recipients = { bob.jid.bare() };
-        send.options.insert(QStringLiteral("omemoProtocol"), QStringLiteral("omemo2"));
         auto *session = alice.client.encryptionManager()->startSession(OmemoEncryption::methodId(),
-                                                                       EncryptionMethod::XmppStanza, send);
+                                                                       EncryptionMethod::XmppStanza | EncryptionMethod::Groupchat, send);
         check(session != nullptr, "Cannot create OMEMO sender session");
         auto *job = session->encrypt(stanza);
         session->close();
         wait(job, alice, bob);
         check(job->success(), "MUC OMEMO 2 encryption failed");
+        check(job->metadata().details.value(QStringLiteral("omemoProtocol")).toString() == QStringLiteral("omemo2"),
+              "Groupchat encryption did not select OMEMO 2 automatically");
 
         QDomDocument incomingDoc;
         auto incoming = incomingDoc.importNode(job->stanza(), true).toElement();
@@ -139,7 +140,105 @@ void exerciseMuc(Endpoint &alice, Endpoint &bob)
     check(!roomAttack->success() && roomAttack->error() == EncryptionJob::Error::AuthenticationFailed,
           "MUC SCE <to/> did not bind ciphertext to the original room");
 
-    qInfo("OMEMO 2 authenticated MUC sender and room binding passed");
+    // The room can return history from a sender who is no longer present.
+    // Use the historical muc#user identity, not the current nick mapping.
+    check(bob.client.groupChatJoin(room.domain(), room.node(), QStringLiteral("Bob")), "Could not join test MUC");
+    QDomDocument presenceDoc;
+    auto presence = presenceDoc.createElementNS(QStringLiteral("jabber:client"), QStringLiteral("presence"));
+    presenceDoc.appendChild(presence);
+    presence.setAttribute(QStringLiteral("from"), room.bare() + QStringLiteral("/Bob"));
+    auto presenceUser = presenceDoc.createElementNS(QStringLiteral("http://jabber.org/protocol/muc#user"),
+                                                     QStringLiteral("x"));
+    auto selfItem = presenceDoc.createElementNS(QStringLiteral("http://jabber.org/protocol/muc#user"),
+                                                 QStringLiteral("item"));
+    selfItem.setAttribute(QStringLiteral("jid"), bob.jid.full());
+    selfItem.setAttribute(QStringLiteral("affiliation"), QStringLiteral("member"));
+    selfItem.setAttribute(QStringLiteral("role"), QStringLiteral("participant"));
+    presenceUser.appendChild(selfItem);
+    auto selfStatus = presenceDoc.createElementNS(QStringLiteral("http://jabber.org/protocol/muc#user"),
+                                                   QStringLiteral("status"));
+    selfStatus.setAttribute(QStringLiteral("code"), QStringLiteral("110"));
+    presenceUser.appendChild(selfStatus);
+    presence.appendChild(presenceUser);
+    bob.stream.inject(presence);
+
+    auto delayedDoc = encryptMessage();
+    auto delayed = delayedDoc.documentElement();
+    auto historyUser = delayedDoc.createElementNS(QStringLiteral("http://jabber.org/protocol/muc#user"),
+                                                   QStringLiteral("x"));
+    auto historyItem = delayedDoc.createElementNS(QStringLiteral("http://jabber.org/protocol/muc#user"),
+                                                   QStringLiteral("item"));
+    historyItem.setAttribute(QStringLiteral("jid"), alice.jid.bare());
+    historyUser.appendChild(historyItem);
+    delayed.appendChild(historyUser);
+    auto delay = delayedDoc.createElementNS(QStringLiteral("urn:xmpp:delay"), QStringLiteral("delay"));
+    delay.setAttribute(QStringLiteral("from"), room.bare());
+    delay.setAttribute(QStringLiteral("stamp"), QStringLiteral("2026-01-01T00:00:00Z"));
+    delayed.appendChild(delay);
+
+    QObject observation;
+    bool receivedHistory = false;
+    QObject::connect(&bob.client, &Client::messageReceived, &observation, [&](const Message &message) {
+        const auto *metadata = bob.client.currentEncryptionMetadata();
+        if (message.type() == Message::Type::Groupchat && message.from() == occupant) {
+            receivedHistory = message.wasEncrypted() && message.body() == QStringLiteral("Private MUC message")
+                && metadata && metadata->details.value(QStringLiteral("archiveReplay")).toBool();
+        }
+    });
+    bob.stream.inject(delayed);
+    for (int i = 0; i < 30 && !receivedHistory; ++i)
+        pump(alice, bob);
+    check(receivedHistory, "Room-delayed OMEMO history did not use the historical sender/replay context");
+
+    // A historical message not encrypted for this device must retain its
+    // sender, time and ID, but must not expose an unauthenticated fallback body.
+    auto missingKeyDoc = encryptMessage();
+    auto missingKey = missingKeyDoc.documentElement();
+    missingKey.setAttribute(QStringLiteral("id"), QStringLiteral("unavailable-history"));
+    missingKey.appendChild(missingKeyDoc.importNode(historyUser, true));
+    missingKey.appendChild(missingKeyDoc.importNode(delay, true));
+    auto header = missingKey.firstChildElement(QStringLiteral("encrypted"))
+                          .firstChildElement(QStringLiteral("header"));
+    for (auto keys = header.firstChildElement(QStringLiteral("keys")); !keys.isNull();
+         keys = header.firstChildElement(QStringLiteral("keys")))
+        header.removeChild(keys);
+    auto fallback = missingKeyDoc.createElement(QStringLiteral("body"));
+    fallback.appendChild(missingKeyDoc.createTextNode(QStringLiteral("untrusted fallback")));
+    missingKey.appendChild(fallback);
+    bool receivedFailure = false;
+    QObject::connect(&bob.client, &Client::messageReceived, &observation, [&](const Message &message) {
+        if (message.id() == QStringLiteral("unavailable-history"))
+            receivedFailure = message.from() == occupant && message.spooled() && message.wasEncrypted()
+                && message.body().isEmpty()
+                && message.decryptionFailure() == Message::DecryptionFailure::NotForThisDevice;
+    });
+    bob.stream.inject(missingKey);
+    for (int i = 0; i < 30 && !receivedFailure; ++i)
+        pump(alice, bob);
+    check(receivedFailure, "Failed MUC history was not delivered with a safe local failure status");
+
+    // Real servers can omit the historical muc#user element from join
+    // history. The host must still get a chance to restore cached plaintext.
+    // This fixture has no history cache, so actual decryption must fail.
+    auto noIdentityDoc = encryptMessage();
+    auto noIdentity = noIdentityDoc.documentElement();
+    noIdentity.setAttribute(QStringLiteral("id"), QStringLiteral("history-without-real-jid"));
+    noIdentity.appendChild(noIdentityDoc.importNode(delay, true));
+    bool missingIdentityFailed = false;
+    QObject::connect(&bob.client, &Client::messageReceived, &observation, [&](const Message &message) {
+        if (message.id() == QStringLiteral("history-without-real-jid"))
+            missingIdentityFailed = message.spooled() && message.body().isEmpty()
+                && message.decryptionFailure() == Message::DecryptionFailure::Failed;
+    });
+    const int handledBeforeReplay = bob.incomingHandled;
+    bob.stream.inject(noIdentity);
+    for (int i = 0; i < 30 && !missingIdentityFailed; ++i)
+        pump(alice, bob);
+    check(bob.incomingHandled == handledBeforeReplay + 1,
+          "Missing historical JID prevented the host's history lookup");
+    check(missingIdentityFailed, "Historical decryption without a real sender must fail closed");
+
+    qInfo("OMEMO 2 authenticated MUC sender, room binding and join history passed");
 }
 
 void exerciseMucSelfEcho(Endpoint &alice, Endpoint &bob)
@@ -169,11 +268,13 @@ void exerciseMucSelfEcho(Endpoint &alice, Endpoint &bob)
                      [&](const QString &, const Jid &, EncryptionJob::Error, const QString &,
                          const EncryptionMetadata &) { ++decryptionFailures; });
     QString receivedBody;
+    QString receivedArchiveId;
     bool wasEncrypted = false;
     QObject::connect(&alice.client, &Client::messageReceived, &alice.client, [&](const Message &m) {
         if (m.type() == Message::Type::Groupchat) {
             ++ownMessages;
             receivedBody = m.body();
+            receivedArchiveId = m.stanzaId(room).id;
             wasEncrypted = m.wasEncrypted();
         }
     });
@@ -198,36 +299,93 @@ void exerciseMucSelfEcho(Endpoint &alice, Endpoint &bob)
     // stream queue. The onStanza hook runs when pump() drains that queue.
     pump(alice, bob);
     check(!captured.documentElement().isNull(), "The encrypted groupchat stanza was not emitted");
+    check(ownMessages == 0, "Local send completed before the room confirmed delivery");
 
     QDomDocument echoed;
     auto stanza = echoed.importNode(captured.documentElement(), true).toElement();
     echoed.appendChild(stanza);
     stanza.setAttribute(QStringLiteral("from"), selfOccupant);
     stanza.setAttribute(QStringLiteral("to"), alice.jid.full());
+    auto archiveId = echoed.createElementNS(QStringLiteral("urn:xmpp:sid:0"), QStringLiteral("stanza-id"));
+    archiveId.setAttribute(QStringLiteral("by"), room.bare());
+    archiveId.setAttribute(QStringLiteral("id"), QStringLiteral("room-archive-id"));
+    stanza.appendChild(archiveId);
 
-    // Matching room, nick and message id alone must not authenticate an
-    // echo. The ciphertext and encrypted recipient keys must also match.
-    QDomDocument forgedDoc;
-    auto forged = forgedDoc.importNode(stanza, true).toElement();
-    forgedDoc.appendChild(forged);
-    auto encryptedElement = forged.firstChildElement(QStringLiteral("encrypted"));
-    check(!encryptedElement.isNull(), "OMEMO encrypted element missing in echo test");
-    encryptedElement.setAttribute(QStringLiteral("tampered"), QStringLiteral("yes"));
-    alice.stream.inject(forged);
-    check(ownMessages == 0 && decryptionFailures == 1,
-          "MUC echoed a ciphertext not matching the locally sent message");
+    // A different occupant with the same ID must not consume the echo.
+    QDomDocument foreign;
+    auto other = foreign.importNode(stanza, true).toElement();
+    foreign.appendChild(other);
+    other.setAttribute(QStringLiteral("from"), room.bare() + QStringLiteral("/Other"));
+    alice.stream.inject(other);
+    check(ownMessages == 0 && decryptionFailures == 1, "Another occupant consumed our pending echo");
+
+    // An unknown ID from our own occupant is not a pending echo either.
+    QDomDocument unknown;
+    auto unknownId = unknown.importNode(stanza, true).toElement();
+    unknown.appendChild(unknownId);
+    unknownId.setAttribute(QStringLiteral("id"), QStringLiteral("unknown-id"));
+    alice.stream.inject(unknownId);
+    pump(alice, bob);
+    check(ownMessages == 0, "Unknown message ID consumed our pending echo");
+    const int failuresBeforeEcho = decryptionFailures;
+
+    // Reconcile the locally generated plaintext without comparing ciphertext.
+    auto payload = stanza.firstChildElement(QStringLiteral("encrypted"))
+                       .firstChildElement(QStringLiteral("payload"));
+    check(!payload.isNull(), "Missing encrypted payload");
+    payload.appendChild(echoed.createTextNode(QStringLiteral("changed")));
+    alice.stream.inject(stanza);
+    check(ownMessages == 1 && receivedBody == QStringLiteral("A protected groupchat message") && wasEncrypted
+              && receivedArchiveId == QStringLiteral("room-archive-id")
+              && decryptionFailures == failuresBeforeEcho,
+          "The outgoing OMEMO MUC echo was not delivered with the room's archive ID");
 
     alice.stream.inject(stanza);
-    check(ownMessages == 1 && receivedBody == QStringLiteral("A protected groupchat message") && wasEncrypted,
-          "The outgoing OMEMO MUC echo was not delivered locally as an encrypted message");
-
-    // A duplicate echo has no remaining local plaintext mapping and must not
-    // be shown again; neither may a message with the wrong stanza ID.
-    alice.stream.inject(stanza);
-    check(ownMessages == 1 && decryptionFailures == 1,
+    check(ownMessages == 1 && decryptionFailures == failuresBeforeEcho,
           "A duplicate OMEMO MUC self echo was shown or reported as a decryption error");
     onStanza = {};
     qInfo("OMEMO 2 MUC self echo reconciliation passed");
+}
+// A first send to multiple unknown recipients must discover all identities
+// before the application asks for trust, rather than failing one at a time.
+void exerciseGroupchatTrustDiscovery()
+{
+    Endpoint sender(QStringLiteral("trust-sender"));
+    Endpoint first(QStringLiteral("trust-first"));
+    Endpoint second(QStringLiteral("trust-second"));
+    for (auto *endpoint : { &sender, &first, &second }) {
+        auto *job = wait(endpoint->omemo->setUp(), *endpoint, sender);
+        check(job->success(), "OMEMO setup for trust discovery failed");
+    }
+    sender.omemo->setNewIdentityTrustLevel(EncryptionTrustLevel::Undecided);
+    sender.omemo->setAcceptedSessionBuildingTrustLevels(EncryptionTrustLevel::ManuallyTrusted);
+    const Jid room(QStringLiteral("trust@conference.example.test"));
+    Message message(room);
+    message.setType(Message::Type::Groupchat);
+    message.setBody(QStringLiteral("Trust discovery"));
+    EncryptionContext context;
+    context.recipients = { first.jid.bare(), second.jid.bare() };
+    auto *session = sender.client.encryptionManager()->startSession(
+        OmemoEncryption::methodId(), EncryptionMethod::XmppStanza | EncryptionMethod::Groupchat, context);
+    check(session != nullptr, "Cannot create groupchat trust test session");
+    auto *job = wait(session->encrypt(message.toStanza(&sender.client.stream()).element()), sender, first);
+    check(!job->success() && job->error() == EncryptionJob::Error::UntrustedIdentity,
+          "Unknown recipients must prevent encryption");
+    for (const auto *recipient : { &first, &second }) {
+        bool discovered = false;
+        for (const auto &device : sender.omemo->devices(recipient->jid)) {
+            if (device.protocol != OmemoProtocol::Omemo2 || device.identityKey.isEmpty())
+                continue;
+            discovered = true;
+            check(device.trust == EncryptionTrustLevel::Undecided, "Discovery silently trusted a device");
+            check(sender.omemo->setTrustLevel(device.owner, device.identityKey, EncryptionTrustLevel::ManuallyTrusted),
+                  "Could not approve discovered identity");
+        }
+        check(discovered, "First encryption attempt did not discover every recipient identity");
+    }
+    job = wait(session->encrypt(message.toStanza(&sender.client.stream()).element()), sender, first);
+    check(job->success(), "Groupchat encryption failed after approving all discovered identities");
+    session->close();
 }
 } // namespace
 
@@ -242,10 +400,17 @@ int main(int argc, char **argv)
         auto setUp = wait(endpoint->omemo->setUp(), alice, bob);
         check(setUp->success() && endpoint->omemo->isReady(), "OMEMO setup failed");
     }
-    if (alice.omemo->supportedProtocols().testFlag(OmemoProtocol::Omemo2)) {
+    const bool modern = alice.omemo->supportedProtocols().testFlag(OmemoProtocol::Omemo2);
+    check(alice.omemo->capabilities().testFlag(EncryptionMethod::Groupchat) == modern,
+          "Groupchat capability must depend on OMEMO 2 support");
+    if (modern) {
+        check(alice.omemo->groupchatRequirements() == (EncryptionMethod::MembersOnly | EncryptionMethod::NonAnonymous
+                                                       | EncryptionMethod::MemberJids),
+              "Incorrect OMEMO groupchat requirements");
         exerciseHostOwnedIncomingSessions(alice, bob);
         exerciseMuc(alice, bob);
         exerciseMucSelfEcho(alice, bob);
+        exerciseGroupchatTrustDiscovery();
     } else {
         qInfo("OMEMO MUC tests skipped: OMEMO 2 unavailable");
     }

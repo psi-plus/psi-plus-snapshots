@@ -16,15 +16,17 @@ HistorySync::CachedMessage cachedMessage(const EDBItemPtr &item)
     return cached;
 }
 
-HistorySync::Context accountContext(PsiAccount *account)
+HistorySync::Context accountContext(PsiAccount *account, const QString &peer, bool room)
 {
     HistorySync::Context context;
     context.accountId = account->id();
     context.owner     = account->jid();
     context.client    = account->client();
     context.connected = [account] { return !account->isServerless() && account->isConnected(); };
-    context.logging
-        = [account] { return account->userAccount().opt_log && (account->edb()->features() & EDB::ArchiveCache); };
+    context.logging = [account, peer, room] {
+        return (account->edb()->features() & EDB::ArchiveCache)
+            && (room ? account->mucHistoryLoggingEnabled(XMPP::Jid(peer)) : account->userAccount().opt_log);
+    };
     context.suppressionAsync = [account](const HistoryArchive::Key &key, HistoryArchive::Entry entry, QObject *receiver,
                                          std::function<void(bool, bool)> finished) {
         account->edb()->requestLocalSuppression(key, std::move(entry), receiver, std::move(finished));
@@ -93,11 +95,11 @@ HistorySync::Context accountContext(PsiAccount *account)
 }
 
 HistorySync::HistorySync(PsiAccount *account, const QString &peer, bool room, const QString &before, QObject *parent,
-                         int pageSize) : HistorySync(accountContext(account), peer, room, before, parent, pageSize)
+                         int pageSize) : HistorySync(accountContext(account, peer, room), peer, room, before, parent, pageSize)
 {
 }
 
 HistorySync::HistorySync(PsiAccount *account, Query query, const QString &peer, bool room, QObject *parent) :
-    HistorySync(accountContext(account), query, peer, room, parent)
+    HistorySync(accountContext(account, peer, room), query, peer, room, parent)
 {
 }

@@ -11,6 +11,7 @@ namespace HistoryMessageExtras {
 inline constexpr int mediaRefsVersion = 2;
 // Identity-only projection for local suppression, before decrypt/display.
 HistoryArchive::Entry identity(const XMPP::Message &, bool local, const QString &archiveUid = {});
+QString decryptionFailureText(XMPP::Message::DecryptionFailure failure);
 QString encode(const XMPP::Message &message);
 void    restore(const QString &json, XMPP::Message &message);
 // Value-only index of attachment ordinals, fingerprints and resource identities.

@@ -28,6 +28,7 @@
 #include "Certificates/CertificateHelpers.h"
 #include "accountconnectionguard.h"
 #include "accountincomingmessage.h"
+#include "accountoutgoingmessage.h"
 #include "historymessageextras.h"
 #include "accountmanagedlg.h"
 #include "accountmodifydlg.h"
@@ -1188,8 +1189,9 @@ PsiAccount::PsiAccount(const UserAccount &acc, PsiContactList *parent, TabManage
     d->encryptionController
         = new PsiEncryptionController(this, d->client, acc.encryptionMethods,
                                       pathToProfile(activeProfile, ApplicationInfo::DataLocation), acc.id, this);
-    // Psi handles incoming encrypted stanzas after Iris has authenticated
-    // protocol-specific constraints (e.g. MUC sender identity).
+    // Psi handles incoming encrypted stanzas. Historical MUC deliveries
+    // may lack a real sender JID; restore cached plaintext before checking
+    // the prerequisites for actual cryptographic decryption.
     d->client->setIncomingEncryptedStanzaHandler([this](const QDomElement &stanza, const QString &methodId,
                                                         const EncryptionContext         &context,
                                                         Client::EncryptionSessionPurpose purpose) -> EncryptionJob * {
@@ -1199,32 +1201,116 @@ PsiAccount::PsiAccount(const UserAccount &acc, PsiContactList *parent, TabManage
             = purpose == Client::EncryptionSessionPurpose::Carbon && from.bare() == d->client->jid().bare() ? to : from;
         if (!peer.isValid())
             return nullptr;
-        if (auto *session = encryptionSession(methodId, peer, purpose == Client::EncryptionSessionPurpose::Groupchat))
-            return session->decrypt(stanza, context);
+        const bool groupchat = purpose == Client::EncryptionSessionPurpose::Groupchat;
+        const bool replay = groupchat && context.isArchiveReplay();
+        const auto decrypt = [this, stanza, methodId, peer, context, groupchat, replay]() -> EncryptionJob * {
+            if (!replay) {
+                if (auto *session = encryptionSession(methodId, peer, groupchat))
+                    return session->decrypt(stanza, context);
+            }
 
-        // No existing owner: decrypt with an operation-scoped session.
-        // In particular, do not create a provisional PsiContact.
-        if (purpose == Client::EncryptionSessionPurpose::Groupchat || peer.node().isEmpty()
-            || d->groupchats.contains(peer.bare()))
-            return nullptr;
-        auto *registry = d->client->encryptionManager();
-        if (!registry)
-            return nullptr;
-        EncryptedSession *session = nullptr;
-        EncryptionContext base;
-        base.recipients = { peer };
-        session         = registry->startSession(methodId, EncryptionMethod::XmppStanza, base);
-        if (!session)
-            return nullptr;
-        auto *job = session->decrypt(stanza, context);
-        // Iris owns the job independently of the session. Closing a
-        // transient session follows both completion and cancellation.
-        connect(job, &QObject::destroyed, session, &EncryptedSession::close);
-        if (job->isFinished())
-            session->close();
-        else
-            connect(job, &EncryptionJob::finished, session, &EncryptedSession::close);
-        return job;
+            // Historical senders need not still occupy the room. Use an
+            // operation-scoped session without creating a provisional contact.
+            if (!replay && (groupchat || peer.node().isEmpty() || d->groupchats.contains(peer.bare())))
+                return nullptr;
+            auto *registry = d->client->encryptionManager();
+            if (!registry)
+                return nullptr;
+            const auto *method = registry->method(methodId);
+            if (replay && method && method->groupchatRequirements().testFlag(EncryptionMethod::NonAnonymous)) {
+                const Jid sender(context.options.value(QStringLiteral("mucRealSender")).toString());
+                if (!sender.isValid() || sender.node().isEmpty() || !sender.resource().isEmpty()) {
+                    auto *job = new EncryptionJob(registry);
+                    job->fail(EncryptionJob::Error::AuthenticationFailed,
+                              tr("No authenticated real JID for historical MUC sender %1").arg(peer.full()));
+                    return job;
+                }
+            }
+            EncryptionContext base;
+            base.recipients = { replay ? Jid(peer.bare()) : peer };
+            auto *session = registry->startSession(methodId, EncryptionMethod::XmppStanza, base);
+            if (!session)
+                return nullptr;
+            auto *job = session->decrypt(stanza, context);
+            connect(job, &QObject::destroyed, session, &EncryptedSession::close);
+            if (job->isFinished())
+                session->close();
+            else
+                connect(job, &EncryptionJob::finished, session, &EncryptedSession::close);
+            return job;
+        };
+        if (!replay || !edb() || !(edb()->features() & EDB::ArchiveCache))
+            return decrypt();
+
+        Message envelope;
+        if (!envelope.fromStanza(Stanza::fromXml(stanza)))
+            return decrypt();
+        const Jid room(peer.bare());
+        const auto uid = envelope.stanzaId(room).id;
+        if (uid.isEmpty() || !envelope.timeStamp().isValid())
+            return decrypt();
+
+        // The same room-assigned ID is used by the MAM archive and join
+        // history. Consult the authenticated local projection before touching
+        // the ratchet. The job's lifetime also cancels the database callback.
+        auto *result = new EncryptionJob(d->client->encryptionManager());
+        const HistoryArchive::Key key { id(), room.bare(), room.bare(), true };
+        edb()->requestArchivedEvent(key, uid, envelope.timeStamp(), result,
+            [this, result, envelope, stanza, methodId, peer, room, uid, decrypt](EDBItemPtr item, bool ok) {
+                if (!ok) {
+                    result->fail(EncryptionJob::Error::StorageError, tr("Could not read cached room message"));
+                    return;
+                }
+                if (item && item->event() && item->event()->type() == PsiEvent::Message) {
+                    auto cached = item->event().staticCast<MessageEvent>()->message().displayMessage();
+                    if (cached.wasEncrypted() && cached.decryptionFailure() == Message::DecryptionFailure::None
+                        && cached.from().compare(peer)
+                        && cached.stanzaId(room).id == uid && cached.id() == envelope.id()
+                        && d->client->hasStream()) {
+                        cached.setTo(envelope.to());
+                        auto plaintext = cached.toStanza(&d->client->stream()).element();
+                        plaintext.setAttribute(QStringLiteral("from"), peer.full());
+                        plaintext.setAttribute(QStringLiteral("to"), envelope.to().full());
+                        plaintext.setAttribute(QStringLiteral("id"), envelope.id());
+                        // Preserve the server's historical timestamp and EME
+                        // marker, not any synthesized timestamp on the SQL row.
+                        for (const auto &name : { QStringLiteral("delay"), QStringLiteral("encryption"),
+                                                  QStringLiteral("stanza-id") }) {
+                            for (auto child = plaintext.firstChildElement(name); !child.isNull();
+                                 child = plaintext.firstChildElement(name))
+                                plaintext.removeChild(child);
+                            for (auto child = stanza.firstChildElement(name); !child.isNull();
+                                 child = child.nextSiblingElement(name))
+                                plaintext.appendChild(plaintext.ownerDocument().importNode(child, true));
+                        }
+                        EncryptionMetadata metadata;
+                        metadata.methodId = methodId;
+                        metadata.protocolOnly = item->protocolOnly();
+                        metadata.details.insert(QStringLiteral("archiveReplay"), true);
+                        result->complete(plaintext, metadata);
+                        return;
+                    }
+                }
+                auto *job = decrypt();
+                if (!job) {
+                    result->fail(EncryptionJob::Error::NoSession, tr("Cannot create a room history decryption session"));
+                    return;
+                }
+                const auto finish = [job, result] {
+                    if (job->success())
+                        result->complete(job->stanza(), job->metadata());
+                    else
+                        result->fail(job->error(), job->errorString(), job->metadata());
+                    job->deleteLater();
+                };
+                if (job->isFinished())
+                    finish();
+                else {
+                    connect(result, &QObject::destroyed, job, &QObject::deleteLater);
+                    connect(job, &EncryptionJob::finished, result, finish);
+                }
+            });
+        return result;
     });
 
     connect(d->client, &Client::disconnected, this, [this]() {
@@ -2421,7 +2507,7 @@ void PsiAccount::sessionStarted()
 {
 #ifdef IRIS_ENABLE_OMEMO
     if (d->encryptionController)
-        d->encryptionController->setUpOmemo(ApplicationInfo::name());
+        d->encryptionController->setUpOmemo();
 #endif
     if (d->voiceCaller)
         d->voiceCaller->initialize();
@@ -3214,6 +3300,8 @@ void PsiAccount::client_presenceError(const Jid &j, int, const QString &str)
 void PsiAccount::client_messageReceived(const Message &m)
 {
     Message                      _m(m);
+    if (_m.decryptionFailure() != Message::DecryptionFailure::None)
+        _m.setBody(HistoryMessageExtras::decryptionFailureText(_m.decryptionFailure()));
     Message                      dm = _m.displayMessage();
     const AccountIncomingMessage incoming(_m, d->client->currentEncryptionMetadata());
 
@@ -3235,7 +3323,10 @@ void PsiAccount::client_messageReceived(const Message &m)
     // plaintext message. The prompt itself is queued by the controller.
     if (d->encryptionController) {
         if (const auto *metadata = d->client->currentEncryptionMetadata(); metadata && !metadata->methodId.isEmpty()
-            && !metadata->details.value(QStringLiteral("localMucEcho")).toBool()) {
+            && !metadata->details.value(QStringLiteral("localMucEcho")).toBool()
+            && !metadata->details.value(QStringLiteral("archiveReplay")).toBool()) {
+            if (dm.type() == Message::Type::Groupchat)
+                d->encryptionController->adoptIncomingGroupchatMethod(Jid(dm.from().bare()), metadata->methodId);
             d->encryptionController->requestTrustDecision(
                 metadata->methodId, metadata->sender, false, findChatDialog(metadata->sender), {},
                 metadata->senderDeviceId, metadata->details.value(QStringLiteral("omemoProtocol")).toString());
@@ -5260,7 +5351,7 @@ void PsiAccount::actionInvite(const Jid &j, const QString &gc)
     m.setTo(room);
     m.addMUCInvite(MUCInvite(j));
 
-    QString password = d->client->groupChatPassword(room.node(), room.domain());
+    QString password = d->client->groupChatPassword(room.domain(), room.node());
     if (!password.isEmpty())
         m.setMUCPassword(password);
     m.setTimeStamp(QDateTime::currentDateTime());
@@ -5365,7 +5456,7 @@ void PsiAccount::openUri(const QUrl &uriToOpen)
 
 void PsiAccount::dj_sendMessage(Message &m, bool log)
 {
-    const QString methodId = m.xencrypted().isEmpty() && m.type() != Message::Type::Groupchat && d->encryptionController
+    const QString methodId = usesAutomaticContactEncryption(m) && d->encryptionController
         ? d->encryptionController->selectedMethod(m.to())
         : QString();
     sendMessageInternal(m, log, nullptr, methodId, true);
@@ -5886,6 +5977,14 @@ void PsiAccount::handleEvent(const PsiEvent::Ptr &e, ActivationType activationTy
                     Jid chatJid = e->from();
                     int type    = findGCContact(chatJid) ? EDB::GroupChatContact : EDB::Contact;
                     logEvent(chatJid, e, type);
+                } else {
+                    // Live messages and the history delivered at room join use
+                    // the same opt-in local history policy. A stanza ID helps
+                    // reconcile with MAM but is not required for local history.
+                    const auto message = me->message().displayMessage();
+                    const auto room = message.from().withResource({});
+                    if (!(message.processingHints() & (Message::NoStore | Message::NoPermanentStore)))
+                        logEvent(room, e, EDB::GroupChat);
                 }
             }
         }
@@ -6525,6 +6624,10 @@ void PsiAccount::logEvent(const Jid &j, const PsiEvent::Ptr &e, int type)
     if (!d->acc.opt_log)
         return;
 
+    if (type == EDB::GroupChat
+        && (!mucHistoryLoggingEnabled(j) || !(edb()->features() & EDB::ArchiveCache)))
+        return;
+
     if (type == EDB::GroupChatContact) {
         if (!PsiOptions::instance()->getOption("options.history.store-muc-private").toBool())
             return;
@@ -6589,6 +6692,32 @@ void PsiAccount::setIgnoreMucBookmarks(const QStringList &sl) { d->acc.ignoreMuc
 QStringList PsiAccount::localMucBookmarks() const { return d->acc.localMucBookmarks; }
 
 QStringList PsiAccount::ignoreMucBookmarks() const { return d->acc.ignoreMucBookmarks; }
+
+QStringList PsiAccount::mucHistoryRooms() const { return d->acc.mucHistoryRooms; }
+
+void PsiAccount::setMucHistoryRooms(const QStringList &rooms)
+{
+    QStringList normalized;
+    for (const auto &entry : rooms) {
+        const Jid room(entry);
+        if (room.isValid() && !room.node().isEmpty() && !normalized.contains(room.bare()))
+            normalized.append(room.bare());
+    }
+    if (d->acc.mucHistoryRooms == normalized)
+        return;
+    d->acc.mucHistoryRooms = normalized;
+    emit updatedAccount();
+}
+
+bool PsiAccount::mucHistoryEnabled(const Jid &room) const
+{
+    return d->acc.mucHistoryRooms.contains(room.bare());
+}
+
+bool PsiAccount::mucHistoryLoggingEnabled(const Jid &room) const
+{
+    return d->acc.opt_log && mucHistoryEnabled(room);
+}
 
 void PsiAccount::shareImage(const Jid &target, const QImage &image, const QString &description,
                             std::function<void(const QString &getUrl)> callback)

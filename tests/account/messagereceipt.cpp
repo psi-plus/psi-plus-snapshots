@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 #include "accountincomingmessage.h"
+#include "accountoutgoingmessage.h"
+#include "conferencebookmark.h"
 
 #include <QHash>
 #include <QPointer>
@@ -136,6 +138,39 @@ struct Fixture {
 class MessageReceiptTest : public QObject {
     Q_OBJECT
 private slots:
+    void bookmarkHistoryIsLocalAndOffByDefault()
+    {
+        ConferenceBookmark bookmark(QStringLiteral("Room"), Jid("room@conference.example.test"),
+                                    ConferenceBookmark::Never);
+        QVERIFY(!bookmark.storeHistory());
+        auto enabled = bookmark;
+        enabled.setStoreHistory(true);
+        QVERIFY(!(bookmark == enabled));
+        QDomDocument document;
+        const auto xml = enabled.toXml(document);
+        const ConferenceBookmark restored(xml);
+        QVERIFY(!restored.storeHistory());
+        QVERIFY(restored == bookmark);
+    }
+
+    void mediatedMucInvitationBypassesContactEncryption()
+    {
+        Message invite(Jid("room@conference.example.test"));
+        invite.addMUCInvite(MUCInvite(Jid("bob@example.test")));
+        invite.setMUCPassword(QStringLiteral("room-password"));
+        QVERIFY(!usesAutomaticContactEncryption(invite));
+
+        Message direct(Jid("bob@example.test"));
+        direct.setType(Message::Type::Chat);
+        direct.setBody(QStringLiteral("Private message"));
+        QVERIFY(usesAutomaticContactEncryption(direct));
+
+        Message groupchat(invite.to());
+        groupchat.setType(Message::Type::Groupchat);
+        groupchat.setBody(QStringLiteral("Room message"));
+        QVERIFY(!usesAutomaticContactEncryption(groupchat));
+    }
+
     void incomingPlaintextDirectMessages()
     {
         Fixture f;

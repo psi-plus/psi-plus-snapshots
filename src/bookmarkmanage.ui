@@ -57,7 +57,13 @@
        </property>
       </widget>
      </item>
-     <item row="7" column="1">
+     <item row="7" column="0" colspan="2">
+      <widget class="QCheckBox" name="storeHistory">
+       <property name="text"><string>Keep local message history</string></property>
+       <property name="toolTip"><string>Store this room\'s messages on this device when account history logging is enabled.</string></property>
+      </widget>
+     </item>
+     <item row="8" column="1">
       <spacer>
        <property name="orientation">
         <enum>Qt::Orientation::Vertical</enum>

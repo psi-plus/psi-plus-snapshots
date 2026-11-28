@@ -70,6 +70,7 @@ bool ConferenceBookmark::isNull() const { return name_.isEmpty() && jid_.isEmpty
 
 void ConferenceBookmark::fromXml(const QDomElement &e)
 {
+    storeHistory_ = false;
     jid_       = e.attribute("jid");
     name_      = e.attribute("name");
     auto_join_ = Never;
@@ -106,5 +107,5 @@ QDomElement ConferenceBookmark::toXml(QDomDocument &doc) const
 bool ConferenceBookmark::operator==(const ConferenceBookmark &other) const
 {
     return name_ == other.name_ && jid_.full() == other.jid_.full() && auto_join_ == other.auto_join_
-        && nick_ == other.nick_ && password_ == other.password_;
+        && nick_ == other.nick_ && password_ == other.password_ && storeHistory_ == other.storeHistory_;
 }

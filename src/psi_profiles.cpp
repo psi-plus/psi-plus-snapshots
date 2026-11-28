@@ -114,6 +114,7 @@ void UserAccount::reset()
     stunHost = stunHosts[0];
 
     encryptionMethods.clear();
+    mucHistoryRooms.clear();
     pgpKnownKeys.clear();
     pgpEnabledChats.clear();
     pgpDisabledChats.clear();
@@ -301,6 +302,7 @@ void UserAccount::fromOptions(OptionsTree *o, QString base)
     alwaysVisibleContacts = o->getOption(base + ".always-visible-contacts").toStringList();
     localMucBookmarks     = o->getOption(base + ".muc-bookmarks").toStringList();
     ignoreMucBookmarks    = o->getOption(base + ".muc-bookmarks-ignore").toStringList();
+    mucHistoryRooms       = o->getOption(base + ".muc-history-rooms").toStringList();
 }
 
 void UserAccount::toOptions(OptionsTree *o, QString base)
@@ -471,6 +473,7 @@ void UserAccount::toOptions(OptionsTree *o, QString base)
     o->setOption(base + ".always-visible-contacts", alwaysVisibleContacts);
     o->setOption(base + ".muc-bookmarks", localMucBookmarks);
     o->setOption(base + ".muc-bookmarks-ignore", ignoreMucBookmarks);
+    o->setOption(base + ".muc-history-rooms", mucHistoryRooms);
 }
 
 int UserAccount::defaultPriority(const XMPP::Status &s)
@@ -534,7 +537,7 @@ void OptionsMigration::lateMigration()
         groupchatToolbar.keys << "gchat_info" << "gchat_clear" << "gchat_find" << "gchat_html_text" << "gchat_configure"
                               << "gchat_share_files" << "gchat_templates";
         groupchatToolbar.keys += pluginsKeys;
-        groupchatToolbar.keys << "spacer" << "gchat_icon";
+        groupchatToolbar.keys << "spacer" << "gchat_encryption" << "gchat_icon";
 
         if (PsiOptions::instance()->getOption("options.ui.chat.disable-paste-send").toBool()) {
             groupchatToolbar.keys.removeAt(groupchatToolbar.keys.indexOf("gchat_ps"));

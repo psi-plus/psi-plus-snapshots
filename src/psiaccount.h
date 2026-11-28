@@ -231,6 +231,10 @@ public:
     void        setIgnoreMucBookmarks(const QStringList &sl);
     QStringList localMucBookmarks() const;
     QStringList ignoreMucBookmarks() const;
+    QStringList mucHistoryRooms() const;
+    void        setMucHistoryRooms(const QStringList &rooms);
+    bool        mucHistoryEnabled(const Jid &room) const;
+    bool        mucHistoryLoggingEnabled(const Jid &room) const;
 
     void shareImage(const Jid &target, const QImage &image, const QString &description,
                     std::function<void(const QString &getUrl)> callback = std::function<void(const QString &getUrl)>());

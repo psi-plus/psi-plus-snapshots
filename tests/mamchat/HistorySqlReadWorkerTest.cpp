@@ -476,6 +476,47 @@ private slots:
         QVERIFY(rows.rows.first().value(QStringLiteral("id")).toLongLong()
                 != rows.rows.last().value(QStringLiteral("id")).toLongLong());
 
+        // Join-history duplicates have the same room-assigned ID even before
+        // MAM has attached archive coverage. A failed replay must not replace
+        // an already decrypted projection.
+        auto room = append;
+        room.id = 50;
+        room.jidType = 3;
+        room.peer = room.contactPeer = QStringLiteral("room@conference.example.test");
+        room.resource.clear();
+        room.encoded.type = 9;
+        room.encoded.sender = room.peer + QStringLiteral("/Bob");
+        room.encoded.messageId = QStringLiteral("client-id");
+        room.encoded.extras = QStringLiteral(R"({"psi:decoded":true,"psi:message":{"from":"room@conference.example.test/Bob","id":"client-id"},"psi:ids":[{"by":"room@conference.example.test","id":"room-id"}]})");
+        QVERIFY(enqueueWrite(room));
+        room.id = 51;
+        room.encoded.body.clear();
+        room.encoded.matchBody.clear();
+        room.encoded.extras = QStringLiteral(R"({"psi:decoded":false,"psi:decryption-error":true,"psi:message":{"from":"room@conference.example.test/Bob","id":"client-id"},"psi:ids":[{"by":"room@conference.example.test","id":"room-id"}]})");
+        QVERIFY(enqueueWrite(room));
+        auto roomPage = page;
+        roomPage.id = 52;
+        roomPage.peer = room.peer;
+        QVERIFY(enqueueRead(roomPage));
+        QTRY_COMPARE(wrote.count(), 2);
+        QVERIFY(qvariant_cast<HistoryWriteResult>(wrote.takeFirst().first()).inserted);
+        const auto duplicate = qvariant_cast<HistoryWriteResult>(wrote.takeFirst().first());
+        QVERIFY(duplicate.success && !duplicate.inserted);
+        QTRY_COMPARE(read.count(), 1);
+        const auto roomRows = qvariant_cast<HistoryReadResult>(read.takeFirst().first());
+        QVERIFY(roomRows.success);
+        QCOMPARE(roomRows.rows.size(), 1);
+        QCOMPARE(roomRows.rows.first().value(QStringLiteral("m_text")).toString(), QStringLiteral("same text"));
+
+        // A conflicting sender must not disappear just because its room ID
+        // collides with a previously stored row.
+        room.id = 53;
+        room.encoded.sender = room.peer + QStringLiteral("/Other");
+        room.encoded.extras.replace(QStringLiteral("/Bob"), QStringLiteral("/Other"));
+        QVERIFY(enqueueWrite(room));
+        QTRY_COMPARE(wrote.count(), 1);
+        QVERIFY(qvariant_cast<HistoryWriteResult>(wrote.takeFirst().first()).inserted);
+
         // The MAM cache page is written atomically on the same worker as
         // live messages and read again without a separate SQL owner.
         HistoryWriteRequest store;
@@ -598,8 +639,14 @@ private slots:
             db.setDatabaseName(path);
             QVERIFY(db.open());
             QSqlQuery q(db);
-            QVERIFY(q.exec(QStringLiteral("SELECT count(*) FROM events")) && q.next());
+            // The independent MUC delivery fixture also survives shutdown.
+            QVERIFY(q.exec(QStringLiteral("SELECT count(*) FROM events JOIN contacts ON contacts.id=events.contact_id "
+                                          "WHERE contacts.jid='bob@example.test'")) && q.next());
             QCOMPARE(q.value(0).toInt(), 1);
+            q.finish();
+            QVERIFY(q.exec(QStringLiteral("SELECT count(*) FROM events JOIN contacts ON contacts.id=events.contact_id "
+                                          "WHERE contacts.jid='room@conference.example.test'")) && q.next());
+            QCOMPARE(q.value(0).toInt(), 2);
             q.finish();
             db.close();
         }

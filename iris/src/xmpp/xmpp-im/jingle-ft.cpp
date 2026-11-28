@@ -198,7 +198,23 @@ namespace XMPP { namespace Jingle { namespace FileTransfer {
         void setState(State s)
         {
             QPointer<Application> guard(q);
+            const auto previous = q->_state;
             q->_state = s;
+            if (s == State::Finished && previous != State::Finished) {
+                const auto condition = lastReason.condition();
+                const auto name = file.name();
+                const auto sid = q->pad()->session()->sid();
+                const auto direction = amISender() ? "send" : "receive";
+                if (condition == Reason::Success || condition == Reason::Cancel) {
+                    qInfo() << "Jingle file transfer ended:" << direction << "file=" << name
+                            << "sid=" << sid << "reason=" << (condition == Reason::Success ? "success" : "cancel");
+                } else {
+                    qWarning() << "Jingle file transfer failed:" << direction << "file=" << name
+                               << "sid=" << sid << "previous-state=" << int(previous)
+                               << "reason-code=" << int(condition) << "reason=" << lastReason.text()
+                               << "remaining-bytes=" << (bytesLeft ? QString::number(*bytesLeft) : QStringLiteral("unknown"));
+                }
+            }
             if (s >= State::Finishing && connection)
                 connection->setReadHook({});
             if (s == State::Finished)

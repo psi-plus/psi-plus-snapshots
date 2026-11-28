@@ -27,6 +27,27 @@ bool parseXml(QDomDocument &doc, const QString &xml)
     return doc.setContent(xml, true);
 #endif
 }
+
+// Only the routing envelope is usable when decryption has failed. In
+// particular, unauthenticated corrections, HTML and media must not become
+// part of the local plaintext projection.
+XMPP::Message failedArchiveMessage(const XMPP::Message &envelope, XMPP::Message::DecryptionFailure failure)
+{
+    XMPP::Message message(envelope.to());
+    message.setFrom(envelope.from());
+    message.setType(envelope.type());
+    message.setTimeStamp(envelope.timeStamp());
+    message.setSpooled(true);
+    message.setId(envelope.id());
+    message.setOriginId(envelope.originId());
+    message.setStanzaIds(envelope.stanzaIds());
+    message.setOccupantId(envelope.occupantId());
+    message.setProcessingHints(envelope.processingHints());
+    message.setWasEncrypted(true);
+    message.setDecryptionFailure(failure);
+    message.setBody(HistoryMessageExtras::decryptionFailureText(failure));
+    return message;
+}
 }
 
 HistorySync::HistorySync(Context context, const QString &peer, bool room, const QString &before, QObject *parent,
@@ -564,14 +585,32 @@ void HistorySync::decodeNext()
         if (!supported) {
             XMPP::Forwarding wrapper;
             wrapper.fromXml(forwarded, context_.client);
-            auto plain = wrapper.message();
-            plain.setBody(tr("Unable to decrypt archived message"));
+            const auto plain = failedArchiveMessage(wrapper.message(), XMPP::Message::DecryptionFailure::Failed);
             decoded_.insert(uid, plain);
             decryptionFailures_.insert(uid);
             continue;
         }
         XMPP::EncryptionContext context;
         context.setArchiveReplay();
+        if (key_.room) {
+            // XEP-0313 §6.1.2: a non-anonymous room's archive supplies
+            // the historical sender in muc#user/item@jid. Never use the
+            // current occupant roster to resolve an archived nickname.
+            const XMPP::Jid occupant(stanza.attribute("from"));
+            if (occupant.bare() != key_.peer || occupant.resource().isEmpty()
+                || stanza.attribute("type") != QLatin1String("groupchat")) {
+                finishError(tr("Invalid archive conversation"));
+                return;
+            }
+            const auto ns = QStringLiteral("http://jabber.org/protocol/muc#user");
+            const auto users = childElementsByTagNameNS(stanza, ns, QStringLiteral("x"));
+            const auto items = users.size() == 1
+                ? childElementsByTagNameNS(users.at(0).toElement(), ns, QStringLiteral("item")) : XDomNodeList();
+            const XMPP::Jid sender(items.size() == 1
+                ? items.at(0).toElement().attribute(QStringLiteral("jid")) : QString());
+            if (sender.isValid() && !sender.node().isEmpty())
+                context.options.insert(QStringLiteral("mucRealSender"), sender.bare());
+        }
         auto           *method = crypto->methodForStanza(stanza);
         const XMPP::Jid conversation(key_.peer);
         auto           *session = method ? archiveSessions_.value(method->id()).data() : nullptr;
@@ -590,8 +629,7 @@ void HistorySync::decodeNext()
             // failure to select a session into plaintext fallback.
             XMPP::Forwarding wrapper;
             wrapper.fromXml(results_.at(decodeIndex_ - 1).firstChildElement("forwarded"), context_.client);
-            auto plain = wrapper.message();
-            plain.setBody(tr("Unable to decrypt archived message"));
+            const auto plain = failedArchiveMessage(wrapper.message(), XMPP::Message::DecryptionFailure::Failed);
             decoded_.insert(uid, plain);
             decryptionFailures_.insert(uid);
             QTimer::singleShot(0, this, &HistorySync::decodeNext);
@@ -617,7 +655,8 @@ void HistorySync::decodeNext()
                     protocolOnly_.insert(uid);
             } else {
                 // Never silently turn an encrypted message into a blank row.
-                plain.setBody(tr("Unable to decrypt archived message"));
+                plain = failedArchiveMessage(plain, job->error() == XMPP::EncryptionJob::Error::NoRecipients
+                    ? XMPP::Message::DecryptionFailure::NotForThisDevice : XMPP::Message::DecryptionFailure::Failed);
                 decryptionFailures_.insert(uid); // Retry later instead of certifying an error placeholder.
             }
             decoded_.insert(uid, plain);

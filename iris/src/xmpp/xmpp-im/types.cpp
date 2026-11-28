@@ -747,6 +747,7 @@ public:
     bool             hasMUCUser = false;
 
     bool spooled = false, wasEncrypted = false;
+    Message::DecryptionFailure decryptionFailure = Message::DecryptionFailure::None;
 
     // XEP-0280 Message Carbons
     bool                                     carbonsPrivate = false;
@@ -1374,6 +1375,13 @@ void Message::setSpooled(bool b) { MessageD()->spooled = b; }
 bool Message::wasEncrypted() const { return d && d->wasEncrypted; }
 
 void Message::setWasEncrypted(bool b) { MessageD()->wasEncrypted = b; }
+
+Message::DecryptionFailure Message::decryptionFailure() const
+{
+    return d ? d->decryptionFailure : DecryptionFailure::None;
+}
+
+void Message::setDecryptionFailure(DecryptionFailure failure) { MessageD()->decryptionFailure = failure; }
 
 QString Message::replaceId() const { return d ? d->replaceId : QString(); }
 

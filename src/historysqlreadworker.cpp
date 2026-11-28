@@ -2,6 +2,9 @@
 #include "historysqlreadworker.h"
 
 #include <QDebug>
+#include <QJsonArray>
+#include <QJsonDocument>
+#include <QJsonObject>
 #include <QSqlError>
 #include <QSqlQuery>
 #include <QThread>
@@ -435,15 +438,61 @@ void HistorySqlReadWorker::write(HistoryWriteRequest request)
                 const auto suppressed
                     = HistoryArchive::applyLocalSuppression(db_, result.changedKey, delivery, &result.localDeletion);
                 result.localDeletion.suppressed = suppressed && *suppressed;
-                // Only a confirmed existing archived delivery can suppress
-                // a duplicate. Old servers may have no stable server IDs.
+                // Match a room-assigned ID plus the original message identity,
+                // or a confirmed archived delivery. No match on text alone.
                 QSqlError  error;
+                qint64 roomDelivery = 0;
+                if (suppressed && !*suppressed && event.isMessage && request.jidType == 3) {
+                    const auto extra = QJsonDocument::fromJson(event.extras.toUtf8()).object();
+                    QString uid;
+                    for (const auto &value : extra.value("psi:ids").toArray()) {
+                        const auto sid = value.toObject();
+                        if (sid.value("by").toString() == jid) {
+                            uid = sid.value("id").toString();
+                            break;
+                        }
+                    }
+                    roomDelivery = HistoryArchive::matchingRoomDelivery(db_, contactId, jid, uid,
+                                                                        delivery, &error);
+                }
                 const bool existing = suppressed && !*suppressed && event.isMessage
-                    && HistoryArchive::matchingDelivery(db_, contactId, delivery, true, &error);
+                    && (roomDelivery || (!error.isValid()
+                        && HistoryArchive::matchingDelivery(db_, contactId, delivery, true, &error)));
                 if (!suppressed || error.isValid()) {
                     qWarning() << "[history-db] Could not match live delivery:" << error.text();
                 } else if (existing || *suppressed) {
                     ok = true;
+                    // Never overwrite decrypted content with a failed replay.
+                    // A later successful receive can repair a previous placeholder.
+                    if (roomDelivery) {
+                        const auto incoming = QJsonDocument::fromJson(event.extras.toUtf8()).object();
+                        if (incoming.value("psi:decoded").toBool()) {
+                            QSqlQuery previous(db_);
+                            previous.prepare("SELECT extra_data FROM events WHERE id=:id");
+                            previous.bindValue(":id", roomDelivery);
+                            ok = previous.exec() && previous.next();
+                            const bool failed = ok && QJsonDocument::fromJson(previous.value(0).toString().toUtf8())
+                                .object().value("psi:decryption-error").toBool();
+                            previous.finish();
+                            if (failed) {
+                                QSqlQuery update(db_);
+                                update.prepare("UPDATE events SET m_text=:body,subject=:subject,lang=:lang,"
+                                               "extra_data=:extra WHERE id=:id");
+                                update.bindValue(":body", event.body);
+                                update.bindValue(":subject", event.subject);
+                                update.bindValue(":lang", event.language);
+                                update.bindValue(":extra", event.extras);
+                                update.bindValue(":id", roomDelivery);
+                                ok = update.exec()
+                                    && HistoryArchive::recordRevision(db_, roomDelivery, contactId, event.type,
+                                                                       event.direction, event.sender, event.messageId,
+                                                                       event.replaceId)
+                                    && HistoryArchive::recordMessageStates(db_, { roomDelivery })
+                                    && (!eventStoredHook_ || eventStoredHook_(db_, roomDelivery,
+                                                                             &result.mediaLinksRemoved));
+                            }
+                        }
+                    }
                 } else {
                     QSqlQuery q(db_);
                     q.prepare(QStringLiteral(

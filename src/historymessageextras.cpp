@@ -3,6 +3,7 @@
 #include "iris/xmpp_htmlelement.h"
 #include "iris/xmpp_reference.h"
 #include "oobmediapolicy.h"
+#include <QCoreApplication>
 #include <QCryptographicHash>
 #include <QFileInfo>
 #include <QJsonArray>
@@ -270,12 +271,28 @@ HistoryArchive::Entry HistoryMessageExtras::identity(const XMPP::Message &messag
     return entry;
 }
 
+QString HistoryMessageExtras::decryptionFailureText(XMPP::Message::DecryptionFailure failure)
+{
+    using Failure = XMPP::Message::DecryptionFailure;
+    if (failure == Failure::NotForThisDevice)
+        return QCoreApplication::translate("EDBSqLite", "This message was not encrypted for your device");
+    if (failure == Failure::Failed)
+        return QCoreApplication::translate("EDBSqLite", "Unable to decrypt archived message");
+    return {};
+}
+
 QString HistoryMessageExtras::encode(const XMPP::Message &message)
 {
     if (message.isNull())
         return {};
     QJsonObject extra;
-    extra.insert("psi:decoded", true);
+    const auto failure = message.decryptionFailure();
+    extra.insert("psi:decoded", failure == XMPP::Message::DecryptionFailure::None);
+    if (failure != XMPP::Message::DecryptionFailure::None) {
+        extra.insert("psi:decryption-error", true);
+        if (failure == XMPP::Message::DecryptionFailure::NotForThisDevice)
+            extra.insert("psi:decryption-not-for-device", true);
+    }
     if (MessageFileShares::hasFileShares(message)) {
         extra.insert("psi:media-refs",
                      QJsonObject { { "version", mediaRefsVersion }, { "items", mediaRefs(message) } });
@@ -380,6 +397,11 @@ void HistoryMessageExtras::restoreFileSharing(const QString &json, XMPP::Message
 void HistoryMessageExtras::restore(const QString &json, XMPP::Message &message)
 {
     const auto extra = QJsonDocument::fromJson(json.toUtf8()).object();
+    if (extra.value("psi:decryption-error").toBool()) {
+        message.setDecryptionFailure(extra.value("psi:decryption-not-for-device").toBool()
+            ? XMPP::Message::DecryptionFailure::NotForThisDevice : XMPP::Message::DecryptionFailure::Failed);
+        message.setWasEncrypted(true);
+    }
     const auto reply = extra.value(QStringLiteral("urn:xmpp:reply:0")).toObject();
     if (!reply.isEmpty())
         message.setReply({ XMPP::Jid(reply.value("to").toString()), reply.value("id").toString() });

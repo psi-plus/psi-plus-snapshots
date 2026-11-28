@@ -39,11 +39,13 @@ HistoryEventFactory::Encoded HistoryEventFactory::encode(const PsiEvent::Ptr &ev
         }
         out.language = message.lang();
         out.subject = message.subject(out.language);
-        out.body = message.body(out.language);
+        out.body = message.decryptionFailure() == Message::DecryptionFailure::None
+            ? message.body(out.language) : QString();
         out.extras   = HistoryMessageExtras::encode(message);
         // The live/MAM match uses the default-language payload, not the
         // localized fields chosen for the EDB text columns.
-        out.matchBody = message.body();
+        out.matchBody = message.decryptionFailure() == Message::DecryptionFailure::None
+            ? message.body() : QString();
         out.matchSubject = message.subject();
         out.sender = message.from().full();
         out.messageId = message.id();
@@ -118,11 +120,8 @@ PsiEvent::Ptr HistoryEventFactory::decode(PsiCon *psi, const QSqlRecord &record)
         }
         m.setSpooled(true);
         HistoryMessageExtras::restore(record.value("extra_data").toString(), m);
-        if (QJsonDocument::fromJson(record.value("extra_data").toString().toUtf8())
-                .object()
-                .value("psi:decryption-error")
-                .toBool())
-            m.setBody(QCoreApplication::translate("EDBSqLite", "Unable to decrypt archived message"));
+        if (m.decryptionFailure() != Message::DecryptionFailure::None)
+            m.setBody(HistoryMessageExtras::decryptionFailureText(m.decryptionFailure()));
         MessageEvent::Ptr me(new MessageEvent(m, pa));
         me->setOriginLocal((record.value("direction").toInt() == 1));
         return me.staticCast<PsiEvent>();

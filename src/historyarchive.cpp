@@ -528,6 +528,38 @@ DisplayedCursor sentDisplayedCursor(QSqlDatabase db, const QString &account, con
     return { query.value(2).toString(), query.value(1).toDateTime(), query.value(0).toLongLong() };
 }
 
+qint64 matchingRoomDelivery(QSqlDatabase db, qint64 contact, const QString &room, const QString &uid,
+                            const Entry &entry, QSqlError *error)
+{
+    const auto &time = entry.timestamp;
+    if (room.isEmpty() || uid.isEmpty() || entry.sender.isEmpty() || !time.isValid())
+        return 0;
+    QSqlQuery q(db);
+    q.prepare("SELECT e.id,e.extra_data FROM events e WHERE e.contact_id=:contact AND e.type=9 "
+              "AND e.history_date_ms BETWEEN :start AND :end ORDER BY e.id");
+    q.bindValue(":contact", contact);
+    q.bindValue(":start", time.toMSecsSinceEpoch() - 300000);
+    q.bindValue(":end", time.toMSecsSinceEpoch() + 300000);
+    if (!readExec(q, error))
+        return 0;
+    qint64 match = 0;
+    while (readNext(q, error)) {
+        const auto extra = QJsonDocument::fromJson(q.value(1).toString().toUtf8()).object();
+        const auto envelope = extra.value("psi:message").toObject();
+        if (envelope.value("from").toString() != entry.sender || envelope.value("id").toString() != entry.messageId)
+            continue;
+        for (const auto &value : extra.value("psi:ids").toArray()) {
+            const auto sid = value.toObject();
+            if (sid.value("by").toString() == room && sid.value("id").toString() == uid) {
+                if (match && match != q.value(0).toLongLong())
+                    return 0; // Existing ambiguous IDs must not overwrite a row.
+                match = q.value(0).toLongLong();
+            }
+        }
+    }
+    return match;
+}
+
 qint64 matchingDelivery(QSqlDatabase db, qint64 contact, const Entry &entry, bool archived, QSqlError *error)
 {
     if (entry.messageId.isEmpty() || entry.sender.isEmpty() || !entry.timestamp.isValid())
@@ -937,7 +969,10 @@ bool storePage(QSqlDatabase db, const Key &key, const QString &before, int limit
         q.finish();
         if (!eventId) {
             QSqlError error;
-            eventId = matchingDelivery(db, contact, entry, false, &error);
+            if (key.room)
+                eventId = matchingRoomDelivery(db, contact, key.peer, entry.uid, entry, &error);
+            if (!eventId && !error.isValid())
+                eventId = matchingDelivery(db, contact, entry, false, &error);
             if (error.isValid()) {
                 qWarning() << "[history-cache] Could not match archived delivery:" << error.text();
                 return fail();
@@ -1025,7 +1060,7 @@ bool storePage(QSqlDatabase db, const Key &key, const QString &before, int limit
                 // Replace known protocol fields, retaining extension/plugin data.
                 for (const auto &name : { "psi:message", "psi:events", "psi:html", "psi:ids", "psi:origin",
                                           "psi:encrypted", "psi:encryption-protocol", "psi:decoded", "psi:has-body",
-                                          "psi:decryption-error", "psi:protocol-only", "psi:media-refs", "psi:media-resources",
+                                          "psi:decryption-error", "psi:decryption-not-for-device", "psi:protocol-only", "psi:media-refs", "psi:media-resources",
                                           "urn:xmpp:reference:0", "urn:xmpp:sfs:0", "jabber:x:oob" })
                     merged.remove(QLatin1String(name));
                 for (auto it = incoming.begin(); it != incoming.end(); ++it)
